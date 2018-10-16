@@ -1,0 +1,14 @@
+*~
+*.tmp
+*.o
+*.i
+*.m
+*.s
+*.hex
+*.elf
+*.eep
+*.lss
+*.map
+*.sym
+*.lst
+.cache/
