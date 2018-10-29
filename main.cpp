@@ -5,26 +5,116 @@
 #include <util/delay.h>
 
 #define DEBUG 1
+#define CALIBRATE 0
 
 using namespace yaal;
 
-template<typename INTRQ, typename RESET, typename PWRDWN>
-class ADV7280A {
-public:
-    INTRQ intrq;
-    RESET reset;
-    PWRDWN pwrdwn;
+namespace ad_decoder {
+    enum InputSelection : uint8_t {
+        INSEL_CVBS_Ain1      = 0x00,
+        INSEL_CVBS_Ain2      = 0x01,
+        INSEL_CVBS_Ain3      = 0x02,
+        INSEL_CVBS_Ain4      = 0x03,
+        INSEL_YC_Ain1_2      = 0x08,
+        INSEL_YC_Ain3_4      = 0x09,
+        INSEL_YPbPr_Ain1_2_3 = 0x0c,
+    };
 
-    unsigned char address;
+    enum AutoDetectSelection : uint8_t {
+        AD_PALBGHID_NTSCJ_SECAM = 0x04,
+        AD_PALBGHID_NTSCM_SECAM = 0x14,
+        AD_PALN_NTSCJ_SECAM     = 0x24,
+        AD_PALN_NTSCM_SECAM     = 0x34,
+        AD_NTSCJ                = 0x44,
+        AD_NTSCM                = 0x54,
+        AD_PAL60                = 0x64,
+        AD_NTSC443              = 0x74,
+        AD_PALBGHID             = 0x84,
+        AD_PALN                 = 0x94,
+        AD_PALM                 = 0xa4,
+        AD_PALM_P               = 0xb4,
+        AD_PAL_COMBI_N          = 0xc4,
+        AD_PAL_COMBI_N_P        = 0xd4,
+        AD_SECAM                = 0xe4,
+        AD_SECAM2               = 0xf4,
+    };
 
-    ADV7280A(unsigned char addr) : address(addr) {
-        intrq.mode = INPUT_PULLUP;
-        reset.mode = OUTPUT;
-        reset = false;
-        pwrdwn.mode = OUTPUT;
-        pwrdwn = false;
-    }
-};
+    constexpr uint8_t OUTC_TOD    = 0x40;
+    constexpr uint8_t OUTC_VBI_EN = 0x80;
+
+    constexpr uint8_t EOUTC_RANGE_LIM   = 0x00;
+    constexpr uint8_t EOUTC_RANGE_FULL  = 0x01;
+    constexpr uint8_t EOUTC_SFL_EN      = 0x02;
+    constexpr uint8_t EOUTC_BLANK_C_VBI = 0x04;
+    constexpr uint8_t EOUTC_TIM_OE      = 0x08;
+    constexpr uint8_t EOUTC_BT656_4     = 0x80;
+
+    constexpr uint8_t PWRM_PWRDWN = 0x20;
+    constexpr uint8_t PWRM_RESET  = 0x80;
+
+    template<typename INTRQ, typename RESET, typename PWRDWN>
+    class ADV7280A {
+    public:
+        INTRQ intrq;
+        RESET reset;
+        PWRDWN pwrdwn;
+
+        uint8_t address;
+
+        ADV7280A(uint8_t addr) : address(addr) {
+            intrq.mode = INPUT_PULLUP;
+            reset.mode = OUTPUT;
+            reset = false;
+            pwrdwn.mode = OUTPUT;
+            pwrdwn = false;
+        }
+
+        void select_input(InputSelection input) {
+            uint8_t insel[] = { 0x00, input };
+            I2c_HW.write_multi(address, insel, insel + sizeof(insel));
+        }
+
+        void select_autodetection(AutoDetectSelection ad) {
+            uint8_t autodetect[] = { 0x02, ad };
+            I2c_HW.write_multi(address, autodetect, autodetect + sizeof(autodetect));
+        }
+
+        void set_output_control(bool tristate_outputs, bool enable_vbi) {
+            uint8_t outc[] = { 0x03, 0x0c };
+            if (tristate_outputs)
+                outc[1] |= OUTC_TOD;
+            if (enable_vbi)
+                outc[1] |= OUTC_VBI_EN;
+            I2c_HW.write_multi(address, outc, outc + sizeof(outc));
+        }
+
+        void set_ext_output_control(bool full_range, bool enable_sfl,
+                bool blank_chroma_vbi, bool enable_timing_out, bool bt656_4) {
+            uint8_t ext_outc[] = { 0x04, 0x30 };
+            if (full_range)
+                ext_outc[1] |= EOUTC_RANGE_FULL;
+            if (enable_sfl)
+                ext_outc[1] |= EOUTC_SFL_EN;
+            if (blank_chroma_vbi)
+                ext_outc[1] |= EOUTC_BLANK_C_VBI;
+            if (enable_timing_out)
+                ext_outc[1] |= EOUTC_TIM_OE;
+            if (bt656_4)
+                ext_outc[1] |= EOUTC_BT656_4;
+            I2c_HW.write_multi(address, ext_outc, ext_outc + sizeof(ext_outc));
+        }
+
+        void set_power_management(bool powerdown, bool reset) {
+            uint8_t pwr_mgmt[] = { 0x0f, 0x00 };
+            if (powerdown)
+                pwr_mgmt[1] |= PWRM_PWRDWN;
+            if (reset)
+                pwr_mgmt[1] |= PWRM_RESET;
+            I2c_HW.write_multi(address, pwr_mgmt, pwr_mgmt + sizeof(pwr_mgmt));
+        }
+
+    };
+}
 
 template<typename RESET>
 class ADV7391 {
@@ -39,6 +129,8 @@ public:
     }
 };
 
+using namespace ad_decoder;
+
 ADV7280A<PortD2, PortD6, PortC2> decoder(0x20);
 ADV7391<PortD7> encoder(0x2a);
 
@@ -51,6 +143,7 @@ Serial0 serial;
 
 int main(void)
 {
+    OSCCAL = 0x84;
     _delay_ms(100);
     cli();
 
@@ -61,7 +154,7 @@ int main(void)
     I2c_HW.setup();
 
 #if DEBUG
-    serial.setup(9600, DATA_EIGHT, STOP_ONE, PARITY_DISABLED);
+    serial.setup(38400, DATA_EIGHT, STOP_ONE, PARITY_DISABLED);
 #endif
 
     sei();
@@ -72,83 +165,70 @@ int main(void)
     encoder.reset = true;
     _delay_ms(6);
 
+#if CALIBRATE
+    const auto old_osccal = OSCCAL;
+    const auto osccal_min = (old_osccal < 10) ? 0 : (old_osccal - 10);
+    const auto osccal_max = (old_osccal > 0xff - 10) ? 0xff : (old_osccal + 10);
+    for (auto i = osccal_min; i != osccal_max; ++i) {
+        OSCCAL = i;
+        _delay_ms(10);
+        serial << _T("OSCCAL = 0x") << ashex(i) << _T(" (old: 0x")
+            << ashex(old_osccal) << _T(") The quick brown fox jumps over the lazy dog. åäö, ÅÄÖ\r\n");
+        OSCCAL = old_osccal;
+        for (size_t j = 0; j < 10; ++j)
+            serial << _T("\r\n");
+    }
+    OSCCAL = old_osccal;
+
+    return 0;
+#endif
+
 #if DEBUG
     serial << _T("converter starting...\r\n");
 #endif
 
-
     // Decoder setup
-#if DEBUG
-    serial << _T("writing I2C multi\r\n");
-#endif
+
+    // Reset
+    decoder.set_power_management(false, true);
+
     // Use CVBS input on A_in1
-    uint8_t insel[] = { 0x00, 0x00 };
-    I2c_HW.write_multi(decoder.address, insel, insel + sizeof(insel));
-#if DEBUG
-#if DEBUG > 1
-    serial << _T("got_sla_ack: ") << ashex(I2c_HW.got_sla_ack) << _T("\r\n");
-    serial << _T("got_data_ack: ") << ashex(I2c_HW.got_data_ack) << _T("\r\n");
-    serial << _T("wrote_all: ") << ashex(I2c_HW.wrote_all) << _T("\r\n");
-    serial << _T("wrote I2C multi\r\n");
-#endif
-    I2c_HW.write(decoder.address, 0x00, true, false);
-#if DEBUG > 1
-    serial << _T("got_sla_ack: ") << ashex(I2c_HW.got_sla_ack) << _T("\r\n");
-    serial << _T("got_data_ack: ") << ashex(I2c_HW.got_data_ack) << _T("\r\n");
-    serial << _T("wrote_all: ") << ashex(I2c_HW.wrote_all) << _T("\r\n");
-#endif
-    uint8_t insel_rb = I2c_HW.read(decoder.address, false);
-#if DEBUG > 1
-    serial << _T("got_sla_ack: ") << ashex(I2c_HW.got_sla_ack) << _T("\r\n");
-    serial << _T("got_data_ack: ") << ashex(I2c_HW.got_data_ack) << _T("\r\n");
-#endif
-    if (insel_rb == insel[1])
-        serial << _T("insel OK: 0x") << ashex(insel_rb) << _T("\r\n");
-    else
-        serial << _T("insel FAIL: 0x") << ashex(insel_rb) << _T("\r\n");
-#endif
+    decoder.select_input(INSEL_CVBS_Ain1);
 
     // Autodetect SD video mode
-    uint8_t autodetect[] = { 0x02, 0x04 };
-    I2c_HW.write_multi(decoder.address, autodetect, autodetect + 2);
+    decoder.select_autodetection(AD_PALBGHID_NTSCJ_SECAM);
 
     // Output control
     // Enable output drivers
-    uint8_t outc[] = { 0x03, 0x0c };
-    I2c_HW.write_multi(decoder.address, outc, outc + sizeof(outc));
+    decoder.set_output_control(false, false);
 
     // Extended output control
-    // Output extended range, enable SFL, blank chroma during VBI etc.
-    uint8_t ext_outc[] = { 0x04, 0x37 };
-    I2c_HW.write_multi(decoder.address, ext_outc, ext_outc + sizeof(ext_outc));
-#if DEBUG
-    I2c_HW.write(decoder.address, 0x04, true, false);
-    uint8_t rb = I2c_HW.read(decoder.address);
-    if (rb == ext_outc[1])
-        serial << _T("ext out control OK: 0x") << ashex(rb) << _T("\r\n");
-    else
-        serial << _T("ext out control FAIL: 0x") << ashex(rb) << _T("\r\n");
-#endif
+    // Output full range, enable SFL, blank chroma during VBI
+    decoder.set_ext_output_control(true, true, true, false, false);
 
     // Power management
     // Power on
-    uint8_t pwr_mgmt[] = { 0x0f, 0x00 };
-    I2c_HW.write_multi(decoder.address, pwr_mgmt, pwr_mgmt + sizeof(pwr_mgmt));
-#if DEBUG
-    I2c_HW.write(decoder.address, 0x0f, true, false);
-    rb = I2c_HW.read(decoder.address);
-    if (rb == pwr_mgmt[1])
-        serial << _T("pwr mgmt OK: 0x") << ashex(rb) << _T("\r\n");
-    else
-        serial << _T("pwr mgmt FAIL: 0x") << ashex(rb) << _T("\r\n");
-#endif
+    decoder.set_power_management(false, false);
 
     // Analog clamp control
     // 100% color bars
     uint8_t ana_clampc[] = { 0x14, 0x11 };
     I2c_HW.write_multi(decoder.address, ana_clampc, ana_clampc + 2);
 
+    // Shaping filter control 2
+    // Select best filter automagically
+    uint8_t shafc2[] = { 0x18, 0x93 };
+    I2c_HW.write_multi(decoder.address, shafc2, shafc2 + 2);
+
+#if 0
+    // Comb filter control
+    // PAL: wide bandwidth, NTSC: medium-low bandwidth (01)
+    uint8_t combfc[] = { 0x19, 0xf6 };
+    I2c_HW.write_multi(decoder.address, combfc, combfc + 2);
+#endif
+
     // Analog Devices control 2
+    // LLC pin active
     uint8_t adc2[] = { 0x1d, 0x40 };
     I2c_HW.write_multi(decoder.address, adc2, adc2 + 2);
 
@@ -156,20 +236,18 @@ int main(void)
     // EAV/SAV codes generated for Analog Devices encoder
     uint8_t vs_fieldc[] = { 0x31, 0x02 };
     I2c_HW.write_multi(decoder.address, vs_fieldc, vs_fieldc + sizeof(vs_fieldc));
-#if DEBUG
-    I2c_HW.write(decoder.address, 0x31, true, false);
-    rb = I2c_HW.read(decoder.address);
-    if (rb == vs_fieldc[1])
-        serial << _T("VS/Field Control 1 OK: 0x") << ashex(rb) << _T("\r\n");
-    else
-        serial << _T("VS/Field Control 1 FAIL: 0x") << ashex(rb) << _T("\r\n");
-#endif
 
     // Output sync select 2
     // Output SFL on the VS/FIELD/SFL pin
     uint8_t out_sync_sel2[] = { 0x6b, 0x14 };
     I2c_HW.write_multi(decoder.address, out_sync_sel2, out_sync_sel2 + 2);
 
+#if 0
+    // Drive strength of digital outputs
+    // Low drive strength for all
+    uint8_t dr_str[] = { 0xf4, 0x00 };
+    I2c_HW.write_multi(decoder.address, dr_str, dr_str + 2);
+#endif
 
     // Encoder setup
 
@@ -177,9 +255,15 @@ int main(void)
     uint8_t enc_reset_seq[] = { 0x17, 0x02 };
     I2c_HW.write_multi(encoder.address, enc_reset_seq, enc_reset_seq + sizeof(enc_reset_seq));
 
+#if 0
     // All DACs and PLL enabled
     uint8_t seq_1_1[] = { 0x00, 0x1c };
     I2c_HW.write_multi(encoder.address, seq_1_1, seq_1_1 + sizeof(seq_1_1));
+#else
+    // All DACs enabled, PLL disabled (only 2x oversampling)
+    uint8_t seq_1_1[] = { 0x00, 0x1e };
+    I2c_HW.write_multi(encoder.address, seq_1_1, seq_1_1 + sizeof(seq_1_1));
+#endif
 
 // Set this to 0 if you want to output the test pattern.
 #if 1
@@ -192,21 +276,30 @@ int main(void)
     I2c_HW.write_multi(encoder.address, seq_1_3, seq_1_3 + sizeof(seq_1_3));
 #endif
 
-    // Pixel data valid, YPrPb, SSAF PrPb filter, AVE control, pedestal
+#if 0
+    // Pixel data valid, YPrPb, PrPb SSAF filter, AVE control, pedestal
     uint8_t seq_1_4[] = { 0x82, 0xc9 };
     I2c_HW.write_multi(encoder.address, seq_1_4, seq_1_4 + sizeof(seq_1_4));
+#else
+    // Pixel data valid, YPrPb, *no* PrPb SSAF filter, AVE control, pedestal
+    uint8_t seq_1_4[] = { 0x82, 0xc8 };
+    I2c_HW.write_multi(encoder.address, seq_1_4, seq_1_4 + sizeof(seq_1_4));
+#endif
 
     // Autodetect SD input standard
     uint8_t sdm6[] = { 0x87, 0x20 };
     I2c_HW.write_multi(encoder.address, sdm6, sdm6 + sizeof(sdm6));
 
+// Set this to 0 if you want to output the test pattern.
+#if 1
     // Enable SD progressive mode (for allowing 240p/288p)
     uint8_t sdm7[] = { 0x88, 0x02 };
     I2c_HW.write_multi(encoder.address, sdm7, sdm7 + sizeof(sdm7));
+#endif
 
 // Set this to 1 if you want to output the test pattern.
 #if 0
-    // Test pattern
+    // Color bar test pattern
     uint8_t pleasework1[] = { 0x84, 0x40 };
     I2c_HW.write_multi(encoder.address, pleasework1, pleasework1 + 2);
 #endif
