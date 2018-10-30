@@ -141,11 +141,72 @@ PortC5 scl;
 Serial0 serial;
 #endif
 
+enum {
+    CVBS,
+    SVIDEO,
+} curr_input;
+
+PortD5 input_change;
+volatile bool input_change_down = false;
+
+static inline bool read_input_change()
+{
+    cli();
+    const bool ret = input_change_down;
+    input_change_down = false;
+    sei();
+    return ret;
+}
+
+static inline void input_change_debounce()
+{
+    static uint8_t counter = 0;
+    static bool state = false;
+
+    bool curr_state = !input_change;
+
+    if (curr_state != state) {
+        if (++counter == 4) {
+            state = curr_state;
+            if (state) {
+                // Will be reset to false when read
+                // in read_input_change().
+                input_change_down = true;
+            }
+            counter = 0;
+        }
+    }
+    else {
+        counter = 0;
+    }
+}
+
+// ISR to run debouncing every 10 ms
+ISR(TIMER0_COMPA_vect)
+{
+    input_change_debounce();
+}
+
+static void setup_timer0()
+{
+    // CTC mode, prescaler 1024, target frequency 100 Hz
+    TCCR0A = _BV(WGM01);
+    TCCR0B = _BV(CS00) | _BV(CS02);
+    OCR0A = 4;
+
+    // Generate an input on compare match
+    TIMSK0 = _BV(OCIE0A);
+}
+
 int main(void)
 {
     OSCCAL = 0x84;
     _delay_ms(100);
     cli();
+
+    // Setup reading the "input change" switch
+    input_change.mode = INPUT_PULLUP;
+    setup_timer0();
 
     // Using external 2kohm pullups for the I2C bus
     sda.mode = INPUT;
@@ -194,6 +255,7 @@ int main(void)
 
     // Use CVBS input on A_in1
     decoder.select_input(INSEL_CVBS_Ain1);
+    curr_input = CVBS;
 
     // Autodetect SD video mode
     decoder.select_autodetection(AD_PALBGHID_NTSCJ_SECAM);
@@ -310,7 +372,20 @@ int main(void)
     uint8_t dec_status1 = 0x00;
     uint8_t dec_status2 = 0x00;
     uint8_t dec_status3 = 0x00;
+#endif
     while (1) {
+        if (read_input_change()) {
+	    if (curr_input == CVBS) {
+                decoder.select_input(INSEL_YC_Ain3_4);
+                curr_input = SVIDEO;
+            }
+            else {
+                decoder.select_input(INSEL_CVBS_Ain1);
+                curr_input = CVBS;
+            }
+        }
+
+#if DEBUG
         I2c_HW.write(decoder.address, 0x10, true, false);
         uint8_t new_status1 = I2c_HW.read(decoder.address);
         I2c_HW.write(decoder.address, 0x12, true, false);
@@ -375,10 +450,10 @@ int main(void)
             serial << _T("\r\n");
         }
         dec_status3 = new_status3;
-
-        _delay_ms(1000);
-    }
 #endif
+
+        _delay_ms(100);
+    }
 
     I2c_HW.deinit();
 
