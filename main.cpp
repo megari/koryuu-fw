@@ -200,7 +200,6 @@ static void setup_timer0()
 
 int main(void)
 {
-    OSCCAL = 0x84;
     _delay_ms(100);
     cli();
 
