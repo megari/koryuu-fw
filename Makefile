@@ -1,6 +1,6 @@
-PROGRAMMER_PORT = /dev/ttyUSB0
-PROGRAMMER_BAUD = 115200
-PROGRAMMER = stk500
+PROGRAMMER_PORT = usb
+#PROGRAMMER_BAUD = 115200
+PROGRAMMER = avrispmkII
 
 # Target filename
 #TARGET := current_dir_name
