@@ -229,8 +229,8 @@ int main(void)
 
 #if CALIBRATE
     const auto old_osccal = OSCCAL;
-    const auto osccal_min = (old_osccal < 10) ? 0 : (old_osccal - 10);
-    const auto osccal_max = (old_osccal > 0xff - 10) ? 0xff : (old_osccal + 10);
+    const auto osccal_min = (old_osccal < 20) ? 0 : (old_osccal - 20);
+    const auto osccal_max = (old_osccal > 0xff - 20) ? 0xff : (old_osccal + 20);
     for (auto i = osccal_min; i != osccal_max; ++i) {
         OSCCAL = i;
         _delay_ms(10);
