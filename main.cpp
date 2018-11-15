@@ -143,7 +143,9 @@ Serial0 serial;
 
 enum {
     CVBS,
+    CVBS_PEDESTAL,
     SVIDEO,
+    SVIDEO_PEDESTAL,
 } curr_input;
 
 PortD5 input_change;
@@ -374,13 +376,27 @@ int main(void)
 #endif
     while (1) {
         if (read_input_change()) {
-	    if (curr_input == CVBS) {
-                decoder.select_input(INSEL_YC_Ain3_4);
-                curr_input = SVIDEO;
-            }
-            else {
+            switch(curr_input) {
+            case CVBS:
                 decoder.select_input(INSEL_CVBS_Ain1);
+                decoder.select_autodetection(AD_PALBGHID_NTSCM_SECAM);
+                curr_input = CVBS_PEDESTAL;
+                break;
+            case CVBS_PEDESTAL:
+                decoder.select_input(INSEL_YC_Ain3_4);
+                decoder.select_autodetection(AD_PALBGHID_NTSCJ_SECAM);
+                curr_input = SVIDEO;
+                break;
+            case SVIDEO:
+                decoder.select_input(INSEL_YC_Ain3_4);
+                decoder.select_autodetection(AD_PALBGHID_NTSCM_SECAM);
+                curr_input = SVIDEO_PEDESTAL;
+                break;
+            case SVIDEO_PEDESTAL:
+                decoder.select_input(INSEL_CVBS_Ain1);
+                decoder.select_autodetection(AD_PALBGHID_NTSCJ_SECAM);
                 curr_input = CVBS;
+                break;
             }
         }
 
