@@ -349,6 +349,10 @@ int main(void)
     I2c_HW.write_multi(encoder.address, seq_1_4, seq_1_4 + sizeof(seq_1_4));
 #endif
 
+    // Enable subcarrier frequency lock
+    uint8_t sdm4[] = { 0x84, 0x06 };
+    I2c_HW.write_multi(encoder.address, sdm4, sdm4 + sizeof(sdm4));
+
     // Autodetect SD input standard
     uint8_t sdm6[] = { 0x87, 0x20 };
     I2c_HW.write_multi(encoder.address, sdm6, sdm6 + sizeof(sdm6));
