@@ -301,6 +301,11 @@ int main(void)
     uint8_t vs_fieldc[] = { 0x31, 0x02 };
     I2c_HW.write_multi(decoder.address, vs_fieldc, vs_fieldc + sizeof(vs_fieldc));
 
+    // CTI DNR control
+    // Disable CTI alpha blender
+    uint8_t cti_dnr[] = { 0x4d, 0xed };
+    I2c_HW.write_multi(decoder.address, cti_dnr, cti_dnr + sizeof(cti_dnr));
+
     // Output sync select 2
     // Output SFL on the VS/FIELD/SFL pin
     uint8_t out_sync_sel2[] = { 0x6b, 0x14 };
