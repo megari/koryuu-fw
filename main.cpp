@@ -336,7 +336,7 @@ int main(void)
     I2c_HW.write_multi(encoder.address, seq_1_1, seq_1_1 + sizeof(seq_1_1));
 #endif
 
-#if ENC_TEST_PATTERN
+#if !ENC_TEST_PATTERN
     // SD input mode
     uint8_t seq_1_2[] = { 0x01, 0x00 };
     I2c_HW.write_multi(encoder.address, seq_1_2, seq_1_2 + sizeof(seq_1_2));
