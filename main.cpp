@@ -6,6 +6,7 @@
 
 #define DEBUG 1
 #define CALIBRATE 0
+#define ENC_TEST_PATTERN 0
 
 using namespace yaal;
 
@@ -328,8 +329,7 @@ int main(void)
     I2c_HW.write_multi(encoder.address, seq_1_1, seq_1_1 + sizeof(seq_1_1));
 #endif
 
-// Set this to 0 if you want to output the test pattern.
-#if 1
+#if ENC_TEST_PATTERN
     // SD input mode
     uint8_t seq_1_2[] = { 0x01, 0x00 };
     I2c_HW.write_multi(encoder.address, seq_1_2, seq_1_2 + sizeof(seq_1_2));
@@ -357,15 +357,13 @@ int main(void)
     uint8_t sdm6[] = { 0x87, 0x20 };
     I2c_HW.write_multi(encoder.address, sdm6, sdm6 + sizeof(sdm6));
 
-// Set this to 0 if you want to output the test pattern.
-#if 1
+#if !ENC_TEST_PATTERN
     // Enable SD progressive mode (for allowing 240p/288p)
     uint8_t sdm7[] = { 0x88, 0x02 };
     I2c_HW.write_multi(encoder.address, sdm7, sdm7 + sizeof(sdm7));
 #endif
 
-// Set this to 1 if you want to output the test pattern.
-#if 0
+#if ENC_TEST_PATTERN
     // Color bar test pattern
     uint8_t pleasework1[] = { 0x84, 0x40 };
     I2c_HW.write_multi(encoder.address, pleasework1, pleasework1 + 2);
