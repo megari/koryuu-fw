@@ -263,8 +263,8 @@ int main(void)
     decoder.select_autodetection(AD_PALBGHID_NTSCJ_SECAM);
 
     // Output control
-    // Enable output drivers
-    decoder.set_output_control(false, false);
+    // Enable output drivers, enable VBI
+    decoder.set_output_control(false, true);
 
     // Extended output control
     // Output full range, enable SFL, blank chroma during VBI
@@ -352,6 +352,12 @@ int main(void)
     // Pixel data valid, YPrPb, *no* PrPb SSAF filter, AVE control, pedestal
     uint8_t seq_1_4[] = { 0x82, 0xc8 };
     I2c_HW.write_multi(encoder.address, seq_1_4, seq_1_4 + sizeof(seq_1_4));
+#endif
+
+#if 1
+    // Enable VBI. Otherwise default.
+    uint8_t sdm3[] = { 0x83, 0x14 };
+    I2c_HW.write_multi(encoder.address, sdm3, sdm3 + sizeof(sdm3));
 #endif
 
     // Enable subcarrier frequency lock
