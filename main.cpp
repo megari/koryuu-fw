@@ -279,7 +279,10 @@ int main(void)
     uint8_t ana_clampc[] = { 0x14, 0x11 };
     I2c_HW.write_multi(decoder.address, ana_clampc, ana_clampc + 2);
 
-    // TODO: clamp timing, subaddress 0x15 (DCT)
+    // Digital clamp control
+    // Digital clamp on, time constant adaptive
+    uint8_t dig_clampc[] = { 0x15, 0x60 };
+    I2c_HW.write_multi(decoder.address, dig_clampc, dig_clampc + 2);
 
     // Shaping filter control 2
     // Select best filter automagically
