@@ -283,7 +283,7 @@ int main(void)
 
     // Shaping filter control 2
     // Select best filter automagically
-    uint8_t shafc2[] = { 0x18, 0x93 };
+    uint8_t shafc2[] = { 0x18, 0x13 };
     I2c_HW.write_multi(decoder.address, shafc2, shafc2 + 2);
 
 #if 0
