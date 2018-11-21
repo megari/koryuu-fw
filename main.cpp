@@ -40,6 +40,13 @@ namespace ad_decoder {
         AD_SECAM2               = 0xf4,
     };
 
+    enum AlphaBlend : uint8_t {
+        AB_SHARPEST  = 0x00,
+        AB_SHARP     = 0x04,
+        AB_SMOOTH    = 0x08,
+        AB_SMOOTHEST = 0x0c,
+    };
+
     constexpr uint8_t OUTC_TOD    = 0x40;
     constexpr uint8_t OUTC_VBI_EN = 0x80;
 
@@ -52,6 +59,10 @@ namespace ad_decoder {
 
     constexpr uint8_t PWRM_PWRDWN = 0x20;
     constexpr uint8_t PWRM_RESET  = 0x80;
+
+    constexpr uint8_t CTIDNRC_CTI_EN    = 0x01;
+    constexpr uint8_t CTIDNRC_CTI_AB_EN = 0x02;
+    constexpr uint8_t CTIDNRC_DNR_EN    = 0x20;
 
     template<typename INTRQ, typename RESET, typename PWRDWN>
     class ADV7280A {
@@ -112,6 +123,20 @@ namespace ad_decoder {
             if (reset)
                 pwr_mgmt[1] |= PWRM_RESET;
             I2c_HW.write_multi(address, pwr_mgmt, pwr_mgmt + sizeof(pwr_mgmt));
+        }
+
+        void set_cti_dnr_control(bool enable_cti, bool enable_cti_ab, AlphaBlend ab, bool enable_dnr) {
+            // CTI DNR control
+            // Disable CTI and CTI alpha blender
+            uint8_t cti_dnr[] = { 0x4d, 0xc0 };
+            if (enable_cti)
+                cti_dnr[1] |= CTIDNRC_CTI_EN;
+            if (enable_cti_ab)
+                cti_dnr[1] |= CTIDNRC_CTI_AB_EN;
+            cti_dnr[1] |= ab;
+            if (enable_dnr)
+                cti_dnr[1] |= CTIDNRC_DNR_EN;
+            I2c_HW.write_multi(address, cti_dnr, cti_dnr + sizeof(cti_dnr));
         }
 
     };
@@ -307,9 +332,8 @@ int main(void)
     I2c_HW.write_multi(decoder.address, vs_fieldc, vs_fieldc + sizeof(vs_fieldc));
 
     // CTI DNR control
-    // Disable CTI and CTI alpha blender
-    uint8_t cti_dnr[] = { 0x4d, 0xec };
-    I2c_HW.write_multi(decoder.address, cti_dnr, cti_dnr + sizeof(cti_dnr));
+    // Disable CTI and CTI alpha blender, enable DNR
+    decoder.set_cti_dnr_control(false, false, AB_SMOOTHEST, true);
 
     // Output sync select 2
     // Output SFL on the VS/FIELD/SFL pin
