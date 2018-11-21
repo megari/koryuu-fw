@@ -304,8 +304,8 @@ int main(void)
     I2c_HW.write_multi(decoder.address, vs_fieldc, vs_fieldc + sizeof(vs_fieldc));
 
     // CTI DNR control
-    // Disable CTI alpha blender
-    uint8_t cti_dnr[] = { 0x4d, 0xed };
+    // Disable CTI and CTI alpha blender
+    uint8_t cti_dnr[] = { 0x4d, 0xec };
     I2c_HW.write_multi(decoder.address, cti_dnr, cti_dnr + sizeof(cti_dnr));
 
     // Output sync select 2
