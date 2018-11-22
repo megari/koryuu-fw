@@ -40,6 +40,13 @@ namespace ad_decoder {
         AD_SECAM2               = 0xf4,
     };
 
+    enum DecoderSubmap : uint8_t {
+        DEC_SUBMAP_USER     = 0x00,
+        DEC_SUBMAP_INTR_VDP = 0x20,
+        DEC_SUBMAP_USER2    = 0x40,
+        DEC_SUBMAP_0x80     = 0x80,
+    };
+
     enum AlphaBlend : uint8_t {
         AB_SHARPEST  = 0x00,
         AB_SHARP     = 0x04,
@@ -96,6 +103,11 @@ namespace ad_decoder {
         void select_autodetection(AutoDetectSelection ad) {
             uint8_t autodetect[] = { 0x02, ad };
             I2c_HW.write_multi(address, autodetect, autodetect + sizeof(autodetect));
+        }
+
+        void select_submap(DecoderSubmap sm) {
+            uint8_t submap[] = { 0x0e, sm };
+            I2c_HW.write_multi(address, submap, submap + sizeof(submap));
         }
 
         void set_output_control(bool tristate_outputs, bool enable_vbi) {
@@ -286,134 +298,8 @@ static void setup_timer0()
     TIMSK0 = _BV(OCIE0A);
 }
 
-int main(void)
+static void setup_encoder()
 {
-    _delay_ms(100);
-    cli();
-
-    // Setup reading the "input change" and "option" switches
-    input_change.mode = INPUT_PULLUP;
-    option.mode = INPUT_PULLUP;
-    setup_timer0();
-
-    // Using external 2kohm pullups for the I2C bus
-    sda.mode = INPUT;
-    scl.mode = INPUT;
-
-    I2c_HW.setup();
-
-#if DEBUG || CALIBRATE
-    serial.setup(38400, DATA_EIGHT, STOP_ONE, PARITY_DISABLED);
-#endif
-
-    sei();
-
-    _delay_ms(6);
-    decoder.reset = true;
-    decoder.pwrdwn = true;
-    encoder.reset = true;
-    _delay_ms(6);
-
-#if CALIBRATE
-    const auto old_osccal = OSCCAL;
-    const auto osccal_min = (old_osccal < 20) ? 0 : (old_osccal - 20);
-    const auto osccal_max = (old_osccal > 0xff - 20) ? 0xff : (old_osccal + 20);
-    for (auto i = osccal_min; i != osccal_max; ++i) {
-        OSCCAL = i;
-        _delay_ms(10);
-        serial << _T("OSCCAL = 0x") << ashex(i) << _T(" (old: 0x")
-            << ashex(old_osccal) << _T(") The quick brown fox jumps over the lazy dog. åäö, ÅÄÖ\r\n");
-        OSCCAL = old_osccal;
-        for (size_t j = 0; j < 10; ++j)
-            serial << _T("\r\n");
-    }
-    OSCCAL = old_osccal;
-
-    return 0;
-#endif
-
-#if DEBUG
-    serial << _T("converter starting...\r\n");
-#endif
-
-    // Decoder setup
-
-    // Reset
-    decoder.set_power_management(false, true);
-
-    // Use CVBS input on A_in1
-    decoder.select_input(INSEL_CVBS_Ain1);
-    curr_input = CVBS;
-
-    // Autodetect SD video mode
-    decoder.select_autodetection(AD_PALBGHID_NTSCJ_SECAM);
-
-    // Output control
-    // Enable output drivers, enable VBI
-    decoder.set_output_control(false, true);
-
-    // Extended output control
-    // Output full range, enable SFL, blank chroma during VBI
-    decoder.set_ext_output_control(true, true, true, false, false);
-
-    // Power management
-    // Power on
-    decoder.set_power_management(false, false);
-
-    // Analog clamp control
-    // 100% color bars
-    uint8_t ana_clampc[] = { 0x14, 0x11 };
-    I2c_HW.write_multi(decoder.address, ana_clampc, ana_clampc + 2);
-
-    // Digital clamp control
-    // Digital clamp on, time constant adaptive
-    uint8_t dig_clampc[] = { 0x15, 0x60 };
-    I2c_HW.write_multi(decoder.address, dig_clampc, dig_clampc + 2);
-
-    // Shaping filter control 2
-    // Select best filter automagically
-    uint8_t shafc2[] = { 0x18, 0x13 };
-    I2c_HW.write_multi(decoder.address, shafc2, shafc2 + 2);
-
-#if 0
-    // Comb filter control
-    // PAL: wide bandwidth, NTSC: medium-low bandwidth (01)
-    uint8_t combfc[] = { 0x19, 0xf6 };
-    I2c_HW.write_multi(decoder.address, combfc, combfc + 2);
-#endif
-
-    // Analog Devices control 2
-    // LLC pin active
-    uint8_t adc2[] = { 0x1d, 0x40 };
-    I2c_HW.write_multi(decoder.address, adc2, adc2 + 2);
-
-    // VS/FIELD Control 1
-    // EAV/SAV codes generated for Analog Devices encoder
-    uint8_t vs_fieldc[] = { 0x31, 0x02 };
-    I2c_HW.write_multi(decoder.address, vs_fieldc, vs_fieldc + sizeof(vs_fieldc));
-
-    // CTI DNR control
-    // Disable CTI and CTI alpha blender, enable DNR
-    decoder.set_cti_dnr_control(false, false, AB_SMOOTHEST, true);
-
-    // Output sync select 2
-    // Output SFL on the VS/FIELD/SFL pin
-    uint8_t out_sync_sel2[] = { 0x6b, 0x14 };
-    I2c_HW.write_multi(decoder.address, out_sync_sel2, out_sync_sel2 + 2);
-
-#if 0
-    // Drive strength of digital outputs
-    // Low drive strength for all
-    uint8_t dr_str[] = { 0xf4, 0x00 };
-    I2c_HW.write_multi(decoder.address, dr_str, dr_str + 2);
-#endif
-
-    // Encoder setup
-
-    // Software reset
-    uint8_t enc_reset_seq[] = { 0x17, 0x02 };
-    I2c_HW.write_multi(encoder.address, enc_reset_seq, enc_reset_seq + sizeof(enc_reset_seq));
-
 #if 0
     // All DACs and PLL enabled
     uint8_t seq_1_1[] = { 0x00, 0x1c };
@@ -469,7 +355,276 @@ int main(void)
     uint8_t pleasework1[] = { 0x84, 0x40 };
     I2c_HW.write_multi(encoder.address, pleasework1, pleasework1 + 2);
 #endif
+}
 
+static inline void setup_ad_black_magic()
+{
+    // Undocumented black magic from AD scripts:
+    // 42 0E 80 ; ADI Required Write
+    // 42 9C 00 ; Reset Current Clamp Circuitry [step1]
+    // 42 9C FF ; Reset Current Clamp Circuitry [step2]
+    // 42 0E 00 ; Enter User Sub Map
+    // 42 80 51 ; ADI Required Write
+    // 42 81 51 ; ADI Required Write
+    // 42 82 68 ; ADI Required Write
+    decoder.select_submap(DEC_SUBMAP_0x80);
+    uint8_t dec_req1[] = { 0x9c, 0x00 };
+    I2c_HW.write_multi(decoder.address, dec_req1, dec_req1 + 2);
+    uint8_t dec_req2[] = { 0x9c, 0xff };
+    I2c_HW.write_multi(decoder.address, dec_req2, dec_req2 + 2);
+    decoder.select_submap(DEC_SUBMAP_USER);
+    uint8_t dec_req3[] = { 0x80, 0x51 };
+    I2c_HW.write_multi(decoder.address, dec_req3, dec_req3 + 2);
+    uint8_t dec_req4[] = { 0x81, 0x51 };
+    I2c_HW.write_multi(decoder.address, dec_req4, dec_req4 + 2);
+    uint8_t dec_req5[] = { 0x82, 0x68 };
+    I2c_HW.write_multi(decoder.address, dec_req5, dec_req5 + 2);
+}
+
+static void setup_cvbs(bool pedestal)
+{
+    // Software reset decoder and encoder
+    decoder.set_power_management(false, true);
+    uint8_t enc_reset_seq[] = { 0x17, 0x02 };
+    I2c_HW.write_multi(encoder.address, enc_reset_seq, enc_reset_seq + sizeof(enc_reset_seq));
+    _delay_ms(10);
+
+    // Decoder setup
+
+    // Exit powerdown
+    decoder.set_power_management(false, false);
+
+    // AFE IBIAS (undocumented register, used in recommended scripts)
+    uint8_t dec_afe_ibias[] = { 0x52, 0xcd };
+    I2c_HW.write_multi(decoder.address, dec_afe_ibias, dec_afe_ibias + 2);
+
+    // Use CVBS input on A_in1
+    decoder.select_input(INSEL_CVBS_Ain1);
+
+    setup_ad_black_magic();
+
+    // Shaping filter control 1, AD recommendation for CVBS
+    uint8_t shafc1[] = { 0x17, 0x41 };
+    I2c_HW.write_multi(decoder.address, shafc1, shafc1 + 2);
+
+    // Autodetect SD video mode
+    if (pedestal)
+        decoder.select_autodetection(AD_PALBGHID_NTSCM_SECAM);
+    else
+        decoder.select_autodetection(AD_PALBGHID_NTSCJ_SECAM);
+
+    // Output control
+    // Enable output drivers, enable VBI
+    decoder.set_output_control(false, true);
+
+    // Extended output control
+    // Output full range, enable SFL, blank chroma during VBI
+    decoder.set_ext_output_control(true, true, true, false, false);
+
+    // A write to a supposedly read-only register, recommended by AD scripts.
+    {
+        uint8_t dec_req1[] = { 0x13, 0x00 };
+        I2c_HW.write_multi(decoder.address, dec_req1, dec_req1 + 2);
+    }
+
+    // Analog clamp control
+    // 100% color bars
+    uint8_t ana_clampc[] = { 0x14, 0x11 };
+    I2c_HW.write_multi(decoder.address, ana_clampc, ana_clampc + 2);
+
+    // Digital clamp control
+    // Digital clamp on, time constant adaptive
+    uint8_t dig_clampc[] = { 0x15, 0x60 };
+    I2c_HW.write_multi(decoder.address, dig_clampc, dig_clampc + 2);
+
+    // Shaping filter control 2
+    // Select best filter automagically
+    uint8_t shafc2[] = { 0x18, 0x13 };
+    I2c_HW.write_multi(decoder.address, shafc2, shafc2 + 2);
+
+#if 0
+    // Comb filter control
+    // PAL: wide bandwidth, NTSC: medium-low bandwidth (01)
+    uint8_t combfc[] = { 0x19, 0xf6 };
+    I2c_HW.write_multi(decoder.address, combfc, combfc + 2);
+#endif
+
+    // Analog Devices control 2
+    // LLC pin active
+    uint8_t adc2[] = { 0x1d, 0x40 };
+    I2c_HW.write_multi(decoder.address, adc2, adc2 + 2);
+
+    // VS/FIELD Control 1
+    // EAV/SAV codes generated for Analog Devices encoder
+    uint8_t vs_fieldc[] = { 0x31, 0x02 };
+    I2c_HW.write_multi(decoder.address, vs_fieldc, vs_fieldc + sizeof(vs_fieldc));
+
+    // CTI DNR control
+    // Disable CTI and CTI alpha blender, enable DNR
+    decoder.set_cti_dnr_control(false, false, AB_SMOOTHEST, true);
+
+    // Output sync select 2
+    // Output SFL on the VS/FIELD/SFL pin
+    uint8_t out_sync_sel2[] = { 0x6b, 0x14 };
+    I2c_HW.write_multi(decoder.address, out_sync_sel2, out_sync_sel2 + 2);
+
+#if 0
+    // Drive strength of digital outputs
+    // Low drive strength for all
+    uint8_t dr_str[] = { 0xf4, 0x00 };
+    I2c_HW.write_multi(decoder.address, dr_str, dr_str + 2);
+#endif
+
+    // Encoder setup
+    setup_encoder();
+}
+
+void setup_svideo(bool pedestal)
+{
+    // Software reset decoder and encoder
+    decoder.set_power_management(false, true);
+    uint8_t enc_reset_seq[] = { 0x17, 0x02 };
+    I2c_HW.write_multi(encoder.address, enc_reset_seq, enc_reset_seq + sizeof(enc_reset_seq));
+    _delay_ms(10);
+
+    // Decoder setup
+
+    // Exit powerdown
+    decoder.set_power_management(false, false);
+
+    // AFE IBIAS (undocumented register, used in recommended scripts)
+    uint8_t dec_afe_ibias[] = { 0x53, 0xce };
+    I2c_HW.write_multi(decoder.address, dec_afe_ibias, dec_afe_ibias + 2);
+
+    // Use YC input on A_in3 and A_in4
+    decoder.select_input(INSEL_YC_Ain3_4);
+
+    setup_ad_black_magic();
+
+    // Autodetect SD video mode
+    if (pedestal)
+        decoder.select_autodetection(AD_PALBGHID_NTSCM_SECAM);
+    else
+        decoder.select_autodetection(AD_PALBGHID_NTSCJ_SECAM);
+
+    // Output control
+    // Enable output drivers, enable VBI
+    decoder.set_output_control(false, true);
+
+    // Extended output control
+    // Output full range, enable SFL, blank chroma during VBI
+    decoder.set_ext_output_control(true, true, true, false, false);
+
+    // A write to a supposedly read-only register, recommended by AD scripts.
+    {
+        uint8_t dec_req1[] = { 0x13, 0x00 };
+        I2c_HW.write_multi(decoder.address, dec_req1, dec_req1 + 2);
+    }
+
+    // Analog clamp control
+    // 100% color bars
+    uint8_t ana_clampc[] = { 0x14, 0x11 };
+    I2c_HW.write_multi(decoder.address, ana_clampc, ana_clampc + 2);
+
+    // Digital clamp control
+    // Digital clamp on, time constant adaptive
+    uint8_t dig_clampc[] = { 0x15, 0x60 };
+    I2c_HW.write_multi(decoder.address, dig_clampc, dig_clampc + 2);
+
+    // Shaping filter control 2
+    // Select best filter automagically
+    uint8_t shafc2[] = { 0x18, 0x13 };
+    I2c_HW.write_multi(decoder.address, shafc2, shafc2 + 2);
+
+#if 0
+    // Comb filter control
+    // PAL: wide bandwidth, NTSC: medium-low bandwidth (01)
+    uint8_t combfc[] = { 0x19, 0xf6 };
+    I2c_HW.write_multi(decoder.address, combfc, combfc + 2);
+#endif
+
+    // Analog Devices control 2
+    // LLC pin active
+    uint8_t adc2[] = { 0x1d, 0x40 };
+    I2c_HW.write_multi(decoder.address, adc2, adc2 + 2);
+
+    // VS/FIELD Control 1
+    // EAV/SAV codes generated for Analog Devices encoder
+    uint8_t vs_fieldc[] = { 0x31, 0x02 };
+    I2c_HW.write_multi(decoder.address, vs_fieldc, vs_fieldc + sizeof(vs_fieldc));
+
+    // CTI DNR control
+    // Disable CTI and CTI alpha blender, enable DNR
+    decoder.set_cti_dnr_control(false, false, AB_SMOOTHEST, true);
+
+    // Output sync select 2
+    // Output SFL on the VS/FIELD/SFL pin
+    uint8_t out_sync_sel2[] = { 0x6b, 0x14 };
+    I2c_HW.write_multi(decoder.address, out_sync_sel2, out_sync_sel2 + 2);
+
+#if 0
+    // Drive strength of digital outputs
+    // Low drive strength for all
+    uint8_t dr_str[] = { 0xf4, 0x00 };
+    I2c_HW.write_multi(decoder.address, dr_str, dr_str + 2);
+#endif
+
+    // Encoder setup
+    setup_encoder();
+}
+
+int main(void)
+{
+    _delay_ms(100);
+    cli();
+
+    // Setup reading the "input change" and "option" switches
+    input_change.mode = INPUT_PULLUP;
+    option.mode = INPUT_PULLUP;
+    setup_timer0();
+
+    // Using external 2kohm pullups for the I2C bus
+    sda.mode = INPUT;
+    scl.mode = INPUT;
+
+    I2c_HW.setup();
+
+#if DEBUG || CALIBRATE
+    serial.setup(38400, DATA_EIGHT, STOP_ONE, PARITY_DISABLED);
+#endif
+
+    sei();
+
+    _delay_ms(6);
+    decoder.reset = true;
+    decoder.pwrdwn = true;
+    encoder.reset = true;
+    _delay_ms(10);
+
+#if CALIBRATE
+    const auto old_osccal = OSCCAL;
+    const auto osccal_min = (old_osccal < 20) ? 0 : (old_osccal - 20);
+    const auto osccal_max = (old_osccal > 0xff - 20) ? 0xff : (old_osccal + 20);
+    for (auto i = osccal_min; i != osccal_max; ++i) {
+        OSCCAL = i;
+        _delay_ms(10);
+        serial << _T("OSCCAL = 0x") << ashex(i) << _T(" (old: 0x")
+            << ashex(old_osccal) << _T(") The quick brown fox jumps over the lazy dog. åäö, ÅÄÖ\r\n");
+        OSCCAL = old_osccal;
+        for (size_t j = 0; j < 10; ++j)
+            serial << _T("\r\n");
+    }
+    OSCCAL = old_osccal;
+
+    return 0;
+#endif
+
+#if DEBUG
+    serial << _T("converter starting...\r\n");
+#endif
+
+    setup_cvbs(false);
+    curr_input = CVBS;
 
 #if DEBUG
     // A simple loop to read and print out status changes in the decoder
@@ -481,23 +636,19 @@ int main(void)
         if (read_input_change()) {
             switch(curr_input) {
             case CVBS:
-                decoder.select_input(INSEL_CVBS_Ain1);
-                decoder.select_autodetection(AD_PALBGHID_NTSCM_SECAM);
+                setup_cvbs(true);
                 curr_input = CVBS_PEDESTAL;
                 break;
             case CVBS_PEDESTAL:
-                decoder.select_input(INSEL_YC_Ain3_4);
-                decoder.select_autodetection(AD_PALBGHID_NTSCJ_SECAM);
+                setup_svideo(false);
                 curr_input = SVIDEO;
                 break;
             case SVIDEO:
-                decoder.select_input(INSEL_YC_Ain3_4);
-                decoder.select_autodetection(AD_PALBGHID_NTSCM_SECAM);
+                setup_svideo(true);
                 curr_input = SVIDEO_PEDESTAL;
                 break;
             case SVIDEO_PEDESTAL:
-                decoder.select_input(INSEL_CVBS_Ain1);
-                decoder.select_autodetection(AD_PALBGHID_NTSCJ_SECAM);
+                setup_cvbs(false);
                 curr_input = CVBS;
                 break;
             }
