@@ -209,10 +209,46 @@ static inline void input_change_debounce()
     }
 }
 
+PortB7 option;
+volatile bool option_down = false;
+
+static inline bool read_option()
+{
+    cli();
+    const bool ret = option_down;
+    option_down = false;
+    sei();
+    return ret;
+}
+
+static inline void option_debounce()
+{
+    static uint8_t counter = 0;
+    static bool state = false;
+
+    bool curr_state = !option;
+
+    if (curr_state != state) {
+        if (++counter == 4) {
+            state = curr_state;
+            if (state) {
+                // Will be reset to false when read
+                // in read_option().
+                option_down = true;
+            }
+            counter = 0;
+        }
+    }
+    else {
+        counter = 0;
+    }
+}
+
 // ISR to run debouncing every 10 ms
 ISR(TIMER0_COMPA_vect)
 {
     input_change_debounce();
+    option_debounce();
 }
 
 static void setup_timer0()
@@ -222,7 +258,7 @@ static void setup_timer0()
     TCCR0B = _BV(CS00) | _BV(CS02);
     OCR0A = 4;
 
-    // Generate an input on compare match
+    // Generate an interrupt on compare match
     TIMSK0 = _BV(OCIE0A);
 }
 
@@ -231,8 +267,9 @@ int main(void)
     _delay_ms(100);
     cli();
 
-    // Setup reading the "input change" switch
+    // Setup reading the "input change" and "option" switches
     input_change.mode = INPUT_PULLUP;
+    option.mode = INPUT_PULLUP;
     setup_timer0();
 
     // Using external 2kohm pullups for the I2C bus
