@@ -747,7 +747,7 @@ int main(void)
         dec_status3 = new_status3;
 #endif
 
-        _delay_ms(100);
+        _delay_ms(1);
     }
 
     I2c_HW.deinit();
