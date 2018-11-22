@@ -47,6 +47,11 @@ namespace ad_decoder {
         AB_SMOOTHEST = 0x0c,
     };
 
+    enum I2P_Algorithm : uint8_t {
+        I2P_ALG_LINEDOUBLE  = 0x00,
+        I2P_ALG_DEINTERLACE = 0x18,
+    };
+
     constexpr uint8_t OUTC_TOD    = 0x40;
     constexpr uint8_t OUTC_VBI_EN = 0x80;
 
@@ -72,8 +77,10 @@ namespace ad_decoder {
         PWRDWN pwrdwn;
 
         uint8_t address;
+        uint8_t vpp_address;
 
-        ADV7280A(uint8_t addr) : address(addr) {
+        ADV7280A(uint8_t addr, uint8_t vpp_addr = 0x84)
+            : address(addr), vpp_address(vpp_addr) {
             intrq.mode = INPUT_PULLUP;
             reset.mode = OUTPUT;
             reset = false;
@@ -137,6 +144,23 @@ namespace ad_decoder {
             if (enable_dnr)
                 cti_dnr[1] |= CTIDNRC_DNR_EN;
             I2c_HW.write_multi(address, cti_dnr, cti_dnr + sizeof(cti_dnr));
+        }
+
+        void deinterlace_reset() {
+            // TODO
+            // VPP slave address: User sub map, subaddress 0xfd, bits 6:0
+            // VPP Map, subaddress 0x41, bit 0
+        }
+
+        void deinterlace_control(bool enable,
+                I2P_Algorithm alg = I2P_ALG_DEINTERLACE) {
+            // TODO
+            // VPP slave address: User sub map, subaddress 0xfd, bits 6:0
+            // Deinterlace enable: VPP Map, subaddress 0x55, bit 7
+            // Algorithm selection (undocumented): VPP Map, subaddress 0x5a, bits 4:3
+            //     0b00: Simple line doubling
+            //     0b11: Proprietary deinterlacing algorithm
+            // Advanced timing mode: VPP Map, subaddress 0x5b, bit 7 (negative)
         }
 
     };
