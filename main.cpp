@@ -76,6 +76,12 @@ namespace ad_decoder {
     constexpr uint8_t CTIDNRC_CTI_AB_EN = 0x02;
     constexpr uint8_t CTIDNRC_DNR_EN    = 0x20;
 
+    constexpr uint8_t AFEC_F1_EN   = 0x01;
+    constexpr uint8_t AFEC_F2_EN   = 0x02;
+    constexpr uint8_t AFEC_F3_EN   = 0x04;
+    constexpr uint8_t AFEC_F4_EN   = 0x08;
+    constexpr uint8_t AFEC_MAN_OVR = 0x10;
+
     template<typename INTRQ, typename RESET, typename PWRDWN>
     class ADV7280A {
     public:
@@ -175,6 +181,20 @@ namespace ad_decoder {
             // Advanced timing mode: VPP Map, subaddress 0x5b, bit 7 (negative)
         }
 
+        void set_aa_filters(bool man_ovr, bool f1, bool f2, bool f3, bool f4) {
+            uint8_t afec[] = { 0xf3, 0x00 };
+            if (man_ovr)
+                afec[1] |= AFEC_MAN_OVR;
+            if (f1)
+                afec[1] |= AFEC_F1_EN;
+            if (f2)
+                afec[1] |= AFEC_F2_EN;
+            if (f3)
+                afec[1] |= AFEC_F3_EN;
+            if (f4)
+                afec[1] |= AFEC_F4_EN;
+            I2c_HW.write_multi(address, afec, afec + sizeof(afec));
+        }
     };
 }
 
@@ -381,7 +401,7 @@ static inline void setup_ad_black_magic()
     I2c_HW.write_multi(decoder.address, dec_req5, dec_req5 + 2);
 }
 
-static void setup_cvbs(bool pedestal)
+static void setup_cvbs(bool pedestal, bool antialias = false)
 {
     // Software reset decoder and encoder
     decoder.set_power_management(false, true);
@@ -468,6 +488,9 @@ static void setup_cvbs(bool pedestal)
     uint8_t out_sync_sel2[] = { 0x6b, 0x14 };
     I2c_HW.write_multi(decoder.address, out_sync_sel2, out_sync_sel2 + 2);
 
+    // Antialiasing Filter Control 1
+    decoder.set_aa_filters(!antialias, false, false, false, false);
+
 #if 0
     // Drive strength of digital outputs
     // Low drive strength for all
@@ -479,7 +502,7 @@ static void setup_cvbs(bool pedestal)
     setup_encoder();
 }
 
-void setup_svideo(bool pedestal)
+void setup_svideo(bool pedestal, bool antialias = false)
 {
     // Software reset decoder and encoder
     decoder.set_power_management(false, true);
@@ -561,6 +584,9 @@ void setup_svideo(bool pedestal)
     // Output SFL on the VS/FIELD/SFL pin
     uint8_t out_sync_sel2[] = { 0x6b, 0x14 };
     I2c_HW.write_multi(decoder.address, out_sync_sel2, out_sync_sel2 + 2);
+
+    // Antialiasing Filter Control 1
+    decoder.set_aa_filters(!antialias, false, false, false, false);
 
 #if 0
     // Drive strength of digital outputs
