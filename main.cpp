@@ -401,7 +401,12 @@ static inline void setup_ad_black_magic()
     I2c_HW.write_multi(decoder.address, dec_req5, dec_req5 + 2);
 }
 
-static void setup_cvbs(bool pedestal, bool smoothing = false)
+enum ConvInputSelection : uint8_t {
+    INPUT_CVBS   = 0,
+    INPUT_SVIDEO = 1,
+};
+
+static void setup_video(ConvInputSelection input, bool pedestal, bool smoothing)
 {
     // Software reset decoder and encoder
     decoder.set_power_management(false, true);
@@ -415,11 +420,22 @@ static void setup_cvbs(bool pedestal, bool smoothing = false)
     decoder.set_power_management(false, false);
 
     // AFE IBIAS (undocumented register, used in recommended scripts)
-    uint8_t dec_afe_ibias[] = { 0x52, 0xcd };
-    I2c_HW.write_multi(decoder.address, dec_afe_ibias, dec_afe_ibias + 2);
+    if (input == INPUT_CVBS) {
+        uint8_t dec_afe_ibias[] = { 0x52, 0xcd };
+        I2c_HW.write_multi(decoder.address, dec_afe_ibias, dec_afe_ibias + 2);
+    }
+    else {
+        uint8_t dec_afe_ibias[] = { 0x53, 0xce };
+        I2c_HW.write_multi(decoder.address, dec_afe_ibias, dec_afe_ibias + 2);
+    }
 
-    // Use CVBS input on A_in1
-    decoder.select_input(INSEL_CVBS_Ain1);
+    // Select input
+    if (input == INPUT_CVBS) {
+        decoder.select_input(INSEL_CVBS_Ain1);
+    }
+    else {
+        decoder.select_input(INSEL_YC_Ain3_4);
+    }
 
     setup_ad_black_magic();
 
@@ -428,120 +444,9 @@ static void setup_cvbs(bool pedestal, bool smoothing = false)
         uint8_t shafc1[] = { 0x17, 0x44 };
         I2c_HW.write_multi(decoder.address, shafc1, shafc1 + 2);
     }
-    else {
+    else if (input == INPUT_CVBS) {
         // Shaping filter control 1, AD recommendation for CVBS
         uint8_t shafc1[] = { 0x17, 0x41 };
-        I2c_HW.write_multi(decoder.address, shafc1, shafc1 + 2);
-    }
-
-    // Autodetect SD video mode
-    if (pedestal)
-        decoder.select_autodetection(AD_PALBGHID_NTSCM_SECAM);
-    else
-        decoder.select_autodetection(AD_PALBGHID_NTSCJ_SECAM);
-
-    // Output control
-    // Enable output drivers, enable VBI
-    decoder.set_output_control(false, true);
-
-    // Extended output control
-    // Output full range, enable SFL, blank chroma during VBI
-    decoder.set_ext_output_control(true, true, true, false, false);
-
-    // A write to a supposedly read-only register, recommended by AD scripts.
-    {
-        uint8_t dec_req1[] = { 0x13, 0x00 };
-        I2c_HW.write_multi(decoder.address, dec_req1, dec_req1 + 2);
-    }
-
-    // Analog clamp control
-    // 100% color bars
-    uint8_t ana_clampc[] = { 0x14, 0x11 };
-    I2c_HW.write_multi(decoder.address, ana_clampc, ana_clampc + 2);
-
-    // Digital clamp control
-    // Digital clamp on, time constant adaptive
-    uint8_t dig_clampc[] = { 0x15, 0x60 };
-    I2c_HW.write_multi(decoder.address, dig_clampc, dig_clampc + 2);
-
-    if (smoothing) {
-        // Shaping filter control 2
-        // SVHS 3 luma LPF
-        uint8_t shafc2[] = { 0x18, 0x84 };
-        I2c_HW.write_multi(decoder.address, shafc2, shafc2 + 2);
-    }
-    else {
-        // Shaping filter control 2
-        // Select best filter automagically
-        uint8_t shafc2[] = { 0x18, 0x13 };
-        I2c_HW.write_multi(decoder.address, shafc2, shafc2 + 2);
-    }
-
-#if 0
-    // Comb filter control
-    // PAL: wide bandwidth, NTSC: medium-low bandwidth (01)
-    uint8_t combfc[] = { 0x19, 0xf6 };
-    I2c_HW.write_multi(decoder.address, combfc, combfc + 2);
-#endif
-
-    // Analog Devices control 2
-    // LLC pin active
-    uint8_t adc2[] = { 0x1d, 0x40 };
-    I2c_HW.write_multi(decoder.address, adc2, adc2 + 2);
-
-    // VS/FIELD Control 1
-    // EAV/SAV codes generated for Analog Devices encoder
-    uint8_t vs_fieldc[] = { 0x31, 0x02 };
-    I2c_HW.write_multi(decoder.address, vs_fieldc, vs_fieldc + sizeof(vs_fieldc));
-
-    // CTI DNR control
-    // Disable CTI and CTI alpha blender, enable DNR
-    decoder.set_cti_dnr_control(false, false, AB_SMOOTHEST, true);
-
-    // Output sync select 2
-    // Output SFL on the VS/FIELD/SFL pin
-    uint8_t out_sync_sel2[] = { 0x6b, 0x14 };
-    I2c_HW.write_multi(decoder.address, out_sync_sel2, out_sync_sel2 + 2);
-
-    // Antialiasing Filter Control 1
-    decoder.set_aa_filters(!smoothing, false, false, false, false);
-
-#if 0
-    // Drive strength of digital outputs
-    // Low drive strength for all
-    uint8_t dr_str[] = { 0xf4, 0x00 };
-    I2c_HW.write_multi(decoder.address, dr_str, dr_str + 2);
-#endif
-
-    // Encoder setup
-    setup_encoder();
-}
-
-void setup_svideo(bool pedestal, bool smoothing = false)
-{
-    // Software reset decoder and encoder
-    decoder.set_power_management(false, true);
-    uint8_t enc_reset_seq[] = { 0x17, 0x02 };
-    I2c_HW.write_multi(encoder.address, enc_reset_seq, enc_reset_seq + sizeof(enc_reset_seq));
-    _delay_ms(10);
-
-    // Decoder setup
-
-    // Exit powerdown
-    decoder.set_power_management(false, false);
-
-    // AFE IBIAS (undocumented register, used in recommended scripts)
-    uint8_t dec_afe_ibias[] = { 0x53, 0xce };
-    I2c_HW.write_multi(decoder.address, dec_afe_ibias, dec_afe_ibias + 2);
-
-    // Use YC input on A_in3 and A_in4
-    decoder.select_input(INSEL_YC_Ain3_4);
-
-    setup_ad_black_magic();
-
-    if (smoothing) {
-        // Shaping filter control 1, SVHS 3 luma & chroma LPF
-        uint8_t shafc1[] = { 0x17, 0x44 };
         I2c_HW.write_multi(decoder.address, shafc1, shafc1 + 2);
     }
 
@@ -678,7 +583,7 @@ int main(void)
     serial << _T("converter starting...\r\n");
 #endif
 
-    setup_cvbs(false);
+    setup_video(INPUT_CVBS, false, false);
     curr_input = CVBS;
 
 #if DEBUG
@@ -691,19 +596,19 @@ int main(void)
         if (read_input_change()) {
             switch(curr_input) {
             case CVBS:
-                setup_cvbs(true);
+                setup_video(INPUT_CVBS, true, false);
                 curr_input = CVBS_PEDESTAL;
                 break;
             case CVBS_PEDESTAL:
-                setup_svideo(false);
+                setup_video(INPUT_SVIDEO, false, false);
                 curr_input = SVIDEO;
                 break;
             case SVIDEO:
-                setup_svideo(true);
+                setup_video(INPUT_SVIDEO, true, false);
                 curr_input = SVIDEO_PEDESTAL;
                 break;
             case SVIDEO_PEDESTAL:
-                setup_cvbs(false);
+                setup_video(INPUT_CVBS, false, false);
                 curr_input = CVBS;
                 break;
             }
