@@ -152,7 +152,6 @@ namespace ad_decoder {
 
         void set_cti_dnr_control(bool enable_cti, bool enable_cti_ab, AlphaBlend ab, bool enable_dnr) {
             // CTI DNR control
-            // Disable CTI and CTI alpha blender
             uint8_t cti_dnr[] = { 0x4d, 0xc0 };
             if (enable_cti)
                 cti_dnr[1] |= CTIDNRC_CTI_EN;
