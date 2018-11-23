@@ -401,7 +401,7 @@ static inline void setup_ad_black_magic()
     I2c_HW.write_multi(decoder.address, dec_req5, dec_req5 + 2);
 }
 
-static void setup_cvbs(bool pedestal, bool antialias = false)
+static void setup_cvbs(bool pedestal, bool smoothing = false)
 {
     // Software reset decoder and encoder
     decoder.set_power_management(false, true);
@@ -423,9 +423,16 @@ static void setup_cvbs(bool pedestal, bool antialias = false)
 
     setup_ad_black_magic();
 
-    // Shaping filter control 1, AD recommendation for CVBS
-    uint8_t shafc1[] = { 0x17, 0x41 };
-    I2c_HW.write_multi(decoder.address, shafc1, shafc1 + 2);
+    if (smoothing) {
+        // Shaping filter control 1, SVHS 3 luma & chroma LPF
+        uint8_t shafc1[] = { 0x17, 0x44 };
+        I2c_HW.write_multi(decoder.address, shafc1, shafc1 + 2);
+    }
+    else {
+        // Shaping filter control 1, AD recommendation for CVBS
+        uint8_t shafc1[] = { 0x17, 0x41 };
+        I2c_HW.write_multi(decoder.address, shafc1, shafc1 + 2);
+    }
 
     // Autodetect SD video mode
     if (pedestal)
@@ -457,10 +464,18 @@ static void setup_cvbs(bool pedestal, bool antialias = false)
     uint8_t dig_clampc[] = { 0x15, 0x60 };
     I2c_HW.write_multi(decoder.address, dig_clampc, dig_clampc + 2);
 
-    // Shaping filter control 2
-    // Select best filter automagically
-    uint8_t shafc2[] = { 0x18, 0x13 };
-    I2c_HW.write_multi(decoder.address, shafc2, shafc2 + 2);
+    if (smoothing) {
+        // Shaping filter control 2
+        // SVHS 3 luma LPF
+        uint8_t shafc2[] = { 0x18, 0x84 };
+        I2c_HW.write_multi(decoder.address, shafc2, shafc2 + 2);
+    }
+    else {
+        // Shaping filter control 2
+        // Select best filter automagically
+        uint8_t shafc2[] = { 0x18, 0x13 };
+        I2c_HW.write_multi(decoder.address, shafc2, shafc2 + 2);
+    }
 
 #if 0
     // Comb filter control
@@ -489,7 +504,7 @@ static void setup_cvbs(bool pedestal, bool antialias = false)
     I2c_HW.write_multi(decoder.address, out_sync_sel2, out_sync_sel2 + 2);
 
     // Antialiasing Filter Control 1
-    decoder.set_aa_filters(!antialias, false, false, false, false);
+    decoder.set_aa_filters(!smoothing, false, false, false, false);
 
 #if 0
     // Drive strength of digital outputs
@@ -502,7 +517,7 @@ static void setup_cvbs(bool pedestal, bool antialias = false)
     setup_encoder();
 }
 
-void setup_svideo(bool pedestal, bool antialias = false)
+void setup_svideo(bool pedestal, bool smoothing = false)
 {
     // Software reset decoder and encoder
     decoder.set_power_management(false, true);
@@ -524,6 +539,12 @@ void setup_svideo(bool pedestal, bool antialias = false)
 
     setup_ad_black_magic();
 
+    if (smoothing) {
+        // Shaping filter control 1, SVHS 3 luma & chroma LPF
+        uint8_t shafc1[] = { 0x17, 0x44 };
+        I2c_HW.write_multi(decoder.address, shafc1, shafc1 + 2);
+    }
+
     // Autodetect SD video mode
     if (pedestal)
         decoder.select_autodetection(AD_PALBGHID_NTSCM_SECAM);
@@ -554,10 +575,18 @@ void setup_svideo(bool pedestal, bool antialias = false)
     uint8_t dig_clampc[] = { 0x15, 0x60 };
     I2c_HW.write_multi(decoder.address, dig_clampc, dig_clampc + 2);
 
-    // Shaping filter control 2
-    // Select best filter automagically
-    uint8_t shafc2[] = { 0x18, 0x13 };
-    I2c_HW.write_multi(decoder.address, shafc2, shafc2 + 2);
+    if (smoothing) {
+        // Shaping filter control 2
+        // SVHS 3 luma LPF
+        uint8_t shafc2[] = { 0x18, 0x84 };
+        I2c_HW.write_multi(decoder.address, shafc2, shafc2 + 2);
+    }
+    else {
+        // Shaping filter control 2
+        // Select best filter automagically
+        uint8_t shafc2[] = { 0x18, 0x13 };
+        I2c_HW.write_multi(decoder.address, shafc2, shafc2 + 2);
+    }
 
 #if 0
     // Comb filter control
@@ -586,7 +615,7 @@ void setup_svideo(bool pedestal, bool antialias = false)
     I2c_HW.write_multi(decoder.address, out_sync_sel2, out_sync_sel2 + 2);
 
     // Antialiasing Filter Control 1
-    decoder.set_aa_filters(!antialias, false, false, false, false);
+    decoder.set_aa_filters(!smoothing, false, false, false, false);
 
 #if 0
     // Drive strength of digital outputs
