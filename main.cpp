@@ -595,7 +595,7 @@ int main(void)
         if (read_input_change()) {
             switch(curr_input) {
             case CVBS:
-                setup_video(INPUT_CVBS, true, false);
+                decoder.select_autodetection(AD_PALBGHID_NTSCM_SECAM);
                 curr_input = CVBS_PEDESTAL;
                 break;
             case CVBS_PEDESTAL:
@@ -603,7 +603,7 @@ int main(void)
                 curr_input = SVIDEO;
                 break;
             case SVIDEO:
-                setup_video(INPUT_SVIDEO, true, false);
+                decoder.select_autodetection(AD_PALBGHID_NTSCM_SECAM);
                 curr_input = SVIDEO_PEDESTAL;
                 break;
             case SVIDEO_PEDESTAL:
