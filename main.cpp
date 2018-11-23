@@ -229,6 +229,8 @@ enum {
     SVIDEO_PEDESTAL,
 } curr_input;
 
+bool smoothing_enabled = false;
+
 PortD5 input_change;
 volatile bool input_change_down = false;
 
@@ -405,6 +407,36 @@ enum ConvInputSelection : uint8_t {
     INPUT_SVIDEO = 1,
 };
 
+static void set_smoothing(ConvInputSelection input, bool smoothing)
+{
+    if (smoothing) {
+        // Shaping filter control 1, SVHS 3 luma & chroma LPF
+        uint8_t shafc1[] = { 0x17, 0x44 };
+        I2c_HW.write_multi(decoder.address, shafc1, shafc1 + 2);
+    }
+    else if (input == INPUT_CVBS) {
+        // Shaping filter control 1, AD recommendation for CVBS
+        uint8_t shafc1[] = { 0x17, 0x41 };
+        I2c_HW.write_multi(decoder.address, shafc1, shafc1 + 2);
+    }
+
+    if (smoothing) {
+        // Shaping filter control 2
+        // SVHS 3 luma LPF
+        uint8_t shafc2[] = { 0x18, 0x84 };
+        I2c_HW.write_multi(decoder.address, shafc2, shafc2 + 2);
+    }
+    else {
+        // Shaping filter control 2
+        // Select best filter automagically
+        uint8_t shafc2[] = { 0x18, 0x13 };
+        I2c_HW.write_multi(decoder.address, shafc2, shafc2 + 2);
+    }
+
+    // Antialiasing Filter Control 1
+    decoder.set_aa_filters(!smoothing, false, false, false, false);
+}
+
 static void setup_video(ConvInputSelection input, bool pedestal, bool smoothing)
 {
     // Software reset decoder and encoder
@@ -438,17 +470,6 @@ static void setup_video(ConvInputSelection input, bool pedestal, bool smoothing)
 
     setup_ad_black_magic();
 
-    if (smoothing) {
-        // Shaping filter control 1, SVHS 3 luma & chroma LPF
-        uint8_t shafc1[] = { 0x17, 0x44 };
-        I2c_HW.write_multi(decoder.address, shafc1, shafc1 + 2);
-    }
-    else if (input == INPUT_CVBS) {
-        // Shaping filter control 1, AD recommendation for CVBS
-        uint8_t shafc1[] = { 0x17, 0x41 };
-        I2c_HW.write_multi(decoder.address, shafc1, shafc1 + 2);
-    }
-
     // Autodetect SD video mode
     if (pedestal)
         decoder.select_autodetection(AD_PALBGHID_NTSCM_SECAM);
@@ -479,18 +500,8 @@ static void setup_video(ConvInputSelection input, bool pedestal, bool smoothing)
     uint8_t dig_clampc[] = { 0x15, 0x60 };
     I2c_HW.write_multi(decoder.address, dig_clampc, dig_clampc + 2);
 
-    if (smoothing) {
-        // Shaping filter control 2
-        // SVHS 3 luma LPF
-        uint8_t shafc2[] = { 0x18, 0x84 };
-        I2c_HW.write_multi(decoder.address, shafc2, shafc2 + 2);
-    }
-    else {
-        // Shaping filter control 2
-        // Select best filter automagically
-        uint8_t shafc2[] = { 0x18, 0x13 };
-        I2c_HW.write_multi(decoder.address, shafc2, shafc2 + 2);
-    }
+    // Optional smoothing
+    set_smoothing(input, smoothing);
 
 #if 0
     // Comb filter control
@@ -517,9 +528,6 @@ static void setup_video(ConvInputSelection input, bool pedestal, bool smoothing)
     // Output SFL on the VS/FIELD/SFL pin
     uint8_t out_sync_sel2[] = { 0x6b, 0x14 };
     I2c_HW.write_multi(decoder.address, out_sync_sel2, out_sync_sel2 + 2);
-
-    // Antialiasing Filter Control 1
-    decoder.set_aa_filters(!smoothing, false, false, false, false);
 
 #if 0
     // Drive strength of digital outputs
@@ -593,7 +601,7 @@ int main(void)
 #endif
     while (1) {
         if (read_input_change()) {
-            switch(curr_input) {
+            switch (curr_input) {
             case CVBS:
                 decoder.select_autodetection(AD_PALBGHID_NTSCM_SECAM);
                 curr_input = CVBS_PEDESTAL;
@@ -609,6 +617,20 @@ int main(void)
             case SVIDEO_PEDESTAL:
                 setup_video(INPUT_CVBS, false, false);
                 curr_input = CVBS;
+                break;
+            }
+        }
+
+        if (read_option()) {
+            smoothing_enabled = !smoothing_enabled;
+            switch (curr_input) {
+            case CVBS:
+            case CVBS_PEDESTAL:
+                set_smoothing(INPUT_CVBS, smoothing_enabled);
+                break;
+            case SVIDEO:
+            case SVIDEO_PEDESTAL:
+                set_smoothing(INPUT_SVIDEO, smoothing_enabled);
                 break;
             }
         }
