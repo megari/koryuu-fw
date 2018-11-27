@@ -230,6 +230,7 @@ enum {
 } curr_input;
 
 bool smoothing_enabled = false;
+bool interlaced = true;
 
 PortD5 input_change;
 volatile bool input_change_down = false;
@@ -364,12 +365,6 @@ static void setup_encoder()
     // Autodetect SD input standard
     uint8_t sdm6[] = { 0x87, 0x20 };
     I2c_HW.write_multi(encoder.address, sdm6, sdm6 + sizeof(sdm6));
-
-#if !ENC_TEST_PATTERN
-    // Enable SD progressive mode (for allowing 240p/288p)
-    uint8_t sdm7[] = { 0x88, 0x02 };
-    I2c_HW.write_multi(encoder.address, sdm7, sdm7 + sizeof(sdm7));
-#endif
 
 #if ENC_TEST_PATTERN
     // Color bar test pattern
@@ -698,6 +693,18 @@ int main(void)
             serial << _T("Interlaced: ") << asdec(!!(new_status3 & 0x40)) << _T("\r\n");
             serial << _T("PAL SW lock: ") << asdec(!!(new_status3 & 0x80)) << _T("\r\n");
             serial << _T("\r\n");
+
+            if (interlaced && !(new_status3 & 0x40)) {
+                // Enable SD progressive mode (for allowing 240p/288p)
+                uint8_t sdm7[] = { 0x88, 0x02 };
+                I2c_HW.write_multi(encoder.address, sdm7, sdm7 + sizeof(sdm7));
+            }
+            else if (!interlaced && !!(new_status3 & 0x40)) {
+                // Disable SD progressive mode
+                uint8_t sdm7[] = { 0x88, 0x00 };
+                I2c_HW.write_multi(encoder.address, sdm7, sdm7 + sizeof(sdm7));
+            }
+            interlaced = !!(new_status3 & 0x40);
         }
         dec_status3 = new_status3;
 #endif
