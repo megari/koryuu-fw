@@ -59,6 +59,19 @@ namespace ad_decoder {
         I2P_ALG_DEINTERLACE = 0x18,
     };
 
+    enum InterruptDriveLevel : uint8_t {
+        IDL_OPEN_DRAIN  = 0x00,
+        IDL_ACTIVE_LOW  = 0x01,
+        IDL_ACTIVE_HIGH = 0x02,
+    };
+
+    enum InterruptDuration : uint8_t {
+        ID_3_XTAL     = 0x00,
+        ID_15_XTAL    = 0x40,
+        ID_63_XTAL    = 0x80,
+        ID_MUST_CLEAR = 0xc0,
+    };
+
     constexpr uint8_t OUTC_TOD    = 0x40;
     constexpr uint8_t OUTC_VBI_EN = 0x80;
 
@@ -193,6 +206,126 @@ namespace ad_decoder {
             if (f4)
                 afec[1] |= AFEC_F4_EN;
             I2c_HW.write_multi(address, afec, afec + sizeof(afec));
+        }
+
+        void set_interrupt_config(InterruptDriveLevel idl, bool manual_mode,
+                InterruptDuration duration, bool setup_submap = true)
+        {
+            if (setup_submap)
+                select_submap(DEC_SUBMAP_INTR_VDP);
+
+            uint8_t intrcfg[] = { 0x40, 0x10 };
+            intrcfg[1] |= idl | duration;
+            if (manual_mode)
+                intrcfg[1] |= 0x04;
+            I2c_HW.write_multi(address, intrcfg, intrcfg + sizeof(intrcfg));
+
+            if (setup_submap)
+                select_submap(DEC_SUBMAP_USER);
+        }
+
+        void interrupt_clear1(bool clear_sd_lock, bool clear_sd_unlock,
+                bool clear_freerun_change, bool clear_mv_ps_cs,
+                bool setup_submap = true)
+        {
+            if (setup_submap)
+                select_submap(DEC_SUBMAP_INTR_VDP);
+
+            uint8_t iclr1[] = { 0x43, 0x00 };
+            if (clear_sd_lock)
+                iclr1[1] |= 0x01;
+            if (clear_sd_unlock)
+                iclr1[1] |= 0x02;
+            if (clear_freerun_change)
+                iclr1[1] |= 0x20;
+            if (clear_mv_ps_cs)
+                iclr1[1] |= 0x40;
+            I2c_HW.write_multi(address, iclr1, iclr1 + sizeof(iclr1));
+
+            if (setup_submap)
+                select_submap(DEC_SUBMAP_USER);
+        }
+
+        void set_interrupt_mask1(bool unmask_sd_lock, bool unmask_sd_unlock,
+                bool unmask_freerun_change, bool unmask_mv_ps_cs,
+                bool setup_submap = true)
+        {
+            if (setup_submap)
+                select_submap(DEC_SUBMAP_INTR_VDP);
+
+            uint8_t imsk1[] = { 0x44, 0x00 };
+            if (unmask_sd_lock)
+                imsk1[1] |= 0x01;
+            if (unmask_sd_unlock)
+                imsk1[1] |= 0x02;
+            if (unmask_freerun_change)
+                imsk1[1] |= 0x20;
+            if (unmask_mv_ps_cs)
+                imsk1[1] |= 0x40;
+            I2c_HW.write_multi(address, imsk1, imsk1 + sizeof(imsk1));
+
+            if (setup_submap)
+                select_submap(DEC_SUBMAP_USER);
+        }
+
+        void interrupt_clear3(bool clear_sd_op_change,
+                bool clear_sd_vsync_lock_change,
+                bool clear_sd_hsync_lock_change,
+                bool clear_sd_ad_result_change,
+                bool clear_secam_lock_change,
+                bool clear_pal_sw_lock_change,
+                bool setup_submap = true)
+        {
+            if (setup_submap)
+                select_submap(DEC_SUBMAP_INTR_VDP);
+
+            uint8_t iclr3[] = { 0x4b, 0x00 };
+            if (clear_sd_op_change)
+                iclr3[1] |= 0x01;
+            if (clear_sd_vsync_lock_change)
+                iclr3[1] |= 0x02;
+            if (clear_sd_hsync_lock_change)
+                iclr3[1] |= 0x04;
+            if (clear_sd_ad_result_change)
+                iclr3[1] |= 0x08;
+            if (clear_secam_lock_change)
+                iclr3[1] |= 0x10;
+            if (clear_pal_sw_lock_change)
+                iclr3[1] |= 0x20;
+            I2c_HW.write_multi(address, iclr3, iclr3 + sizeof(iclr3));
+
+            if (setup_submap)
+                select_submap(DEC_SUBMAP_USER);
+        }
+
+        void set_interrupt_mask3(bool unmask_sd_op_change,
+                bool unmask_sd_vsync_lock_change,
+                bool unmask_sd_hsync_lock_change,
+                bool unmask_sd_ad_result_change,
+                bool unmask_secam_lock_change,
+                bool unmask_pal_sw_lock_change,
+                bool setup_submap = true)
+        {
+            if (setup_submap)
+                select_submap(DEC_SUBMAP_INTR_VDP);
+
+            uint8_t imsk3[] = { 0x4c, 0x00 };
+            if (unmask_sd_op_change)
+                imsk3[1] |= 0x01;
+            if (unmask_sd_vsync_lock_change)
+                imsk3[1] |= 0x02;
+            if (unmask_sd_hsync_lock_change)
+                imsk3[1] |= 0x04;
+            if (unmask_sd_ad_result_change)
+                imsk3[1] |= 0x08;
+            if (unmask_secam_lock_change)
+                imsk3[1] |= 0x10;
+            if (unmask_pal_sw_lock_change)
+                imsk3[1] |= 0x20;
+            I2c_HW.write_multi(address, imsk3, imsk3 + sizeof(imsk3));
+
+            if (setup_submap)
+                select_submap(DEC_SUBMAP_USER);
         }
     };
 }
@@ -465,6 +598,16 @@ static void setup_video(ConvInputSelection input, bool pedestal, bool smoothing)
 
     setup_ad_black_magic();
 
+    // Setup interrupts:
+    // Interrupt on various SD events, active low, active until cleared
+    decoder.select_submap(DEC_SUBMAP_INTR_VDP);
+    decoder.set_interrupt_mask1(true, true, true, false, false);
+    decoder.interrupt_clear1(true, true, true, false, false);
+    decoder.set_interrupt_mask3(true, true, true, true, true, true, false);
+    decoder.interrupt_clear3(true, true, true, true, true, true, false);
+    decoder.set_interrupt_config(IDL_ACTIVE_LOW, false, ID_MUST_CLEAR, false);
+    decoder.select_submap(DEC_SUBMAP_USER);
+
     // Autodetect SD video mode
     if (pedestal)
         decoder.select_autodetection(AD_PALBGHID_NTSCM_SECAM);
@@ -588,12 +731,15 @@ int main(void)
     setup_video(INPUT_CVBS, false, false);
     curr_input = CVBS;
 
+    // Main loop.
+    // Reads the switch status, decoder interrupt line and the status registers.
 #if DEBUG
-    // A simple loop to read and print out status changes in the decoder
     uint8_t dec_status1 = 0x00;
     uint8_t dec_status2 = 0x00;
-    uint8_t dec_status3 = 0x00;
 #endif
+    uint8_t dec_status3 = 0x00;
+    bool got_interrupt = false;
+    bool check_once_more = false;
     while (1) {
         if (read_input_change()) {
             switch (curr_input) {
@@ -630,86 +776,115 @@ int main(void)
             }
         }
 
+        got_interrupt = !decoder.intrq;
+
+        if (got_interrupt || check_once_more) {
 #if DEBUG
-        I2c_HW.write(decoder.address, 0x10, true, false);
-        uint8_t new_status1 = I2c_HW.read(decoder.address);
-        I2c_HW.write(decoder.address, 0x12, true, false);
-        uint8_t new_status2 = I2c_HW.read(decoder.address);
-        I2c_HW.write(decoder.address, 0x13, true, false);
-        uint8_t new_status3 = I2c_HW.read(decoder.address);
-
-        if (new_status1 != dec_status1) {
-            serial << _T("Status 1 changed:\r\n");
-            serial << _T("In lock: ") << asdec(new_status1 & 0x01) << _T("\r\n");
-            serial << _T("Lost lock: ") << asdec(!!(new_status1 & 0x02)) << _T("\r\n");
-            serial << _T("fSC lock: ") << asdec(!!(new_status1 & 0x04)) << _T("\r\n");
-            serial << _T("Follow PW: ") << asdec(!!(new_status1 & 0x08)) << _T("\r\n");
-            serial << _T("Video standard: ");
-            switch ((new_status1 >> 4) & 0x07) {
-            case 0x00:
-                serial << _T("NTSC M/J\r\n");
-                break;
-            case 0x01:
-                serial << _T("NTSC 4.43\r\n");
-                break;
-            case 0x02:
-                serial << _T("PAL M\r\n");
-                break;
-            case 0x03:
-                serial << _T("PAL 60\r\n");
-                break;
-            case 0x04:
-                serial << _T("PAL B/G/H/I/D\r\n");
-                break;
-            case 0x05:
-                serial << _T("SECAM\r\n");
-                break;
-            case 0x06:
-                serial << _T("PAL Combination N\r\n");
-                break;
-            case 0x07:
-                serial << _T("SECAM 525\r\n");
-                break;
+            if (got_interrupt) {
+                serial << _T("Interrupt\r\n");
+                I2c_HW.write(decoder.address, 0x42, true, false);
+                uint8_t intrs1 = I2c_HW.read(decoder.address);
+                I2c_HW.write(decoder.address, 0x4a, true, false);
+                uint8_t intrs3 = I2c_HW.read(decoder.address);
+                serial << _T("Interrupt status 1: 0x") << ashex(intrs1) << _T("\r\n");
+                serial << _T("Interrupt status 3: 0x") << ashex(intrs3) << _T("\r\n");
             }
-            serial << _T("Color kill: ") << asdec(!!(new_status1 & 0x80)) << _T("\r\n");
-            serial << _T("\r\n");
-        }
-        dec_status1 = new_status1;
 
-        if (new_status2 != dec_status2) {
-            serial << _T("Status 2 changed:\r\n");
-            serial << _T("Line length nonstandard: ") << asdec(!!(new_status2 & 0x10)) << _T("\r\n");
-            serial << _T("fSC nonstandard: ") << asdec(!!(new_status2 & 0x20)) << _T("\r\n");
-            serial << _T("\r\n");
-        }
-        dec_status2 = new_status2;
-
-        if (new_status3 != dec_status3) {
-            serial << _T("Status 3 changed:\r\n");
-            serial << _T("Horizontal lock: ") << asdec(new_status3 & 0x01) << _T("\r\n");
-            serial << _T("Frequency: ") << ((new_status3 & 0x04) ? _T("50") : _T("60")) << _T("\r\n");
-            serial << _T("Freerun active: ") << asdec(!!(new_status3 & 0x10)) << _T("\r\n");
-            serial << _T("Field length standard: ") << asdec(!!(new_status3 & 0x20)) << _T("\r\n");
-            serial << _T("Interlaced: ") << asdec(!!(new_status3 & 0x40)) << _T("\r\n");
-            serial << _T("PAL SW lock: ") << asdec(!!(new_status3 & 0x80)) << _T("\r\n");
-            serial << _T("\r\n");
-
-            if (interlaced && !(new_status3 & 0x40)) {
-                // Enable SD progressive mode (for allowing 240p/288p)
-                uint8_t sdm7[] = { 0x88, 0x02 };
-                I2c_HW.write_multi(encoder.address, sdm7, sdm7 + sizeof(sdm7));
-            }
-            else if (!interlaced && !!(new_status3 & 0x40)) {
-                // Disable SD progressive mode
-                uint8_t sdm7[] = { 0x88, 0x00 };
-                I2c_HW.write_multi(encoder.address, sdm7, sdm7 + sizeof(sdm7));
-            }
-            interlaced = !!(new_status3 & 0x40);
-        }
-        dec_status3 = new_status3;
+            I2c_HW.write(decoder.address, 0x10, true, false);
+            uint8_t new_status1 = I2c_HW.read(decoder.address);
+            I2c_HW.write(decoder.address, 0x12, true, false);
+            uint8_t new_status2 = I2c_HW.read(decoder.address);
 #endif
 
-        _delay_ms(1);
+            I2c_HW.write(decoder.address, 0x13, true, false);
+            uint8_t new_status3 = I2c_HW.read(decoder.address);
+
+#if DEBUG
+            if (new_status1 != dec_status1) {
+                serial << _T("Status 1 changed:\r\n");
+                serial << _T("In lock: ") << asdec(new_status1 & 0x01) << _T("\r\n");
+                serial << _T("Lost lock: ") << asdec(!!(new_status1 & 0x02)) << _T("\r\n");
+                serial << _T("fSC lock: ") << asdec(!!(new_status1 & 0x04)) << _T("\r\n");
+                serial << _T("Follow PW: ") << asdec(!!(new_status1 & 0x08)) << _T("\r\n");
+                serial << _T("Video standard: ");
+                switch ((new_status1 >> 4) & 0x07) {
+                case 0x00:
+                    serial << _T("NTSC M/J\r\n");
+                    break;
+                case 0x01:
+                    serial << _T("NTSC 4.43\r\n");
+                    break;
+                case 0x02:
+                    serial << _T("PAL M\r\n");
+                    break;
+                case 0x03:
+                    serial << _T("PAL 60\r\n");
+                    break;
+                case 0x04:
+                    serial << _T("PAL B/G/H/I/D\r\n");
+                    break;
+                case 0x05:
+                    serial << _T("SECAM\r\n");
+                    break;
+                case 0x06:
+                    serial << _T("PAL Combination N\r\n");
+                    break;
+                case 0x07:
+                    serial << _T("SECAM 525\r\n");
+                    break;
+                }
+                serial << _T("Color kill: ") << asdec(!!(new_status1 & 0x80)) << _T("\r\n");
+                serial << _T("\r\n");
+            }
+            dec_status1 = new_status1;
+
+            if (new_status2 != dec_status2) {
+                serial << _T("Status 2 changed:\r\n");
+                serial << _T("Line length nonstandard: ") << asdec(!!(new_status2 & 0x10)) << _T("\r\n");
+                serial << _T("fSC nonstandard: ") << asdec(!!(new_status2 & 0x20)) << _T("\r\n");
+                serial << _T("\r\n");
+            }
+            dec_status2 = new_status2;
+#endif
+
+            if (new_status3 != dec_status3) {
+#if DEBUG
+                serial << _T("Status 3 changed:\r\n");
+                serial << _T("Horizontal lock: ") << asdec(new_status3 & 0x01) << _T("\r\n");
+                serial << _T("Frequency: ") << ((new_status3 & 0x04) ? _T("50") : _T("60")) << _T("\r\n");
+                serial << _T("Freerun active: ") << asdec(!!(new_status3 & 0x10)) << _T("\r\n");
+                serial << _T("Field length standard: ") << asdec(!!(new_status3 & 0x20)) << _T("\r\n");
+                serial << _T("Interlaced: ") << asdec(!!(new_status3 & 0x40)) << _T("\r\n");
+                serial << _T("PAL SW lock: ") << asdec(!!(new_status3 & 0x80)) << _T("\r\n");
+                serial << _T("\r\n");
+#endif
+
+                if (interlaced && !(new_status3 & 0x40)) {
+                    // Enable SD progressive mode (for allowing 240p/288p)
+                    uint8_t sdm7[] = { 0x88, 0x02 };
+                    I2c_HW.write_multi(encoder.address, sdm7, sdm7 + sizeof(sdm7));
+                }
+                else if (!interlaced && !!(new_status3 & 0x40)) {
+                    // Disable SD progressive mode
+                    uint8_t sdm7[] = { 0x88, 0x00 };
+                    I2c_HW.write_multi(encoder.address, sdm7, sdm7 + sizeof(sdm7));
+                }
+                interlaced = !!(new_status3 & 0x40);
+            }
+            dec_status3 = new_status3;
+
+            // Clear all interrupt flags...
+            if (got_interrupt) {
+                decoder.select_submap(DEC_SUBMAP_INTR_VDP);
+                decoder.interrupt_clear1(true, true, true, false, false);
+                decoder.interrupt_clear3(true, true, true, true, true, true, false);
+                decoder.select_submap(DEC_SUBMAP_USER);
+            }
+
+            // ... but check the status registers once more in case something
+            // happened in the meanwhile.
+            check_once_more = got_interrupt;
+        }
     }
 
     I2c_HW.deinit();
