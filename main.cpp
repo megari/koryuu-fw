@@ -351,6 +351,10 @@ ADV7391<PortD7> encoder(0x2a);
 PortC4 sda;
 PortC5 scl;
 
+PortB1 led_CVBS;
+PortB2 led_YC;
+PortB6 led_OPT;
+
 #if DEBUG
 Serial0 serial;
 #endif
@@ -688,6 +692,14 @@ int main(void)
     option.mode = INPUT_PULLUP;
     setup_timer0();
 
+    // Setup LEDs
+    led_CVBS.mode = OUTPUT;
+    led_CVBS = false;
+    led_YC.mode = OUTPUT;
+    led_YC = false;
+    led_OPT.mode = OUTPUT;
+    led_OPT = false;
+
     // Using external 2kohm pullups for the I2C bus
     sda.mode = INPUT;
     scl.mode = INPUT;
@@ -730,6 +742,7 @@ int main(void)
 
     setup_video(INPUT_CVBS, false, false);
     curr_input = CVBS;
+    led_CVBS = true;
 
     // Main loop.
     // Reads the switch status, decoder interrupt line and the status registers.
@@ -750,6 +763,8 @@ int main(void)
             case CVBS_PEDESTAL:
                 setup_video(INPUT_SVIDEO, false, false);
                 curr_input = SVIDEO;
+                led_CVBS = false;
+                led_YC = true;
                 break;
             case SVIDEO:
                 decoder.select_autodetection(AD_PALBGHID_NTSCM_SECAM);
@@ -758,6 +773,8 @@ int main(void)
             case SVIDEO_PEDESTAL:
                 setup_video(INPUT_CVBS, false, false);
                 curr_input = CVBS;
+                led_CVBS = true;
+                led_YC = false;
                 break;
             }
         }
@@ -774,6 +791,7 @@ int main(void)
                 set_smoothing(INPUT_SVIDEO, smoothing_enabled);
                 break;
             }
+            led_OPT = smoothing_enabled;
         }
 
         got_interrupt = !decoder.intrq;
