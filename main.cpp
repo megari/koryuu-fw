@@ -139,6 +139,10 @@ static void setup_encoder()
     I2c_HW.write_multi(encoder.address, seq_1_1, seq_1_1 + sizeof(seq_1_1));
 #endif
 
+    // Enable DAC autopower-down (based on cable detection)
+    uint8_t seq_apd[] = { 0x10, 0x10 };
+    I2c_HW.write_multi(encoder.address, seq_apd, seq_apd + sizeof(seq_apd));
+
 #if !ENC_TEST_PATTERN
     // SD input mode
     uint8_t seq_1_2[] = { 0x01, 0x00 };
