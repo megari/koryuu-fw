@@ -81,6 +81,17 @@ namespace ad_decoder {
         // COAST_MODE_RESERVED = 0x0c,
     };
 
+    enum DetectedVideoType : uint8_t {
+        NTSC_MJ   = 0x00,
+        NTSC_443  = 0x01,
+        PAL_M     = 0x02,
+        PAL_60    = 0x03,
+        PAL_BGHID = 0x04,
+        SECAM     = 0x05,
+        PAL_CN    = 0x06,
+        SECAM_525 = 0x07,
+    };
+
     constexpr uint8_t OUTC_TOD    = 0x40;
     constexpr uint8_t OUTC_VBI_EN = 0x80;
 
@@ -185,20 +196,34 @@ namespace ad_decoder {
         }
 
         void deinterlace_reset() {
-            // TODO
-            // VPP slave address: User sub map, subaddress 0xfd, bits 6:0
+            // VPP slave address: User sub map, subaddress 0xfd, bits 7:1
+            I2C_WRITE(address, 0xfd, vpp_address);
+
             // VPP Map, subaddress 0x41, bit 0
+            I2C_WRITE(vpp_address, 0x41, 0x01);
         }
 
         void deinterlace_control(bool enable,
                 I2P_Algorithm alg = I2P_ALG_DEINTERLACE) {
-            // TODO
-            // VPP slave address: User sub map, subaddress 0xfd, bits 6:0
+
+            // VPP slave address: User sub map, subaddress 0xfd, bits 7:1
+            I2C_WRITE(address, 0xfd, vpp_address);
+
+            // ADI required write
+            I2C_WRITE(vpp_address, 0xa3, 0x00);
+
+            // Advanced timing mode: VPP Map, subaddress 0x5b, bit 7 (negative)
+            I2C_WRITE(vpp_address, 0x5b, enable ? 0x00 : 0x80);
+
             // Deinterlace enable: VPP Map, subaddress 0x55, bit 7
+            I2C_WRITE(vpp_address, 0x55, enable ? 0x80 : 0x00);
+
             // Algorithm selection (undocumented): VPP Map, subaddress 0x5a, bits 4:3
             //     0b00: Simple line doubling
             //     0b11: Proprietary deinterlacing algorithm
-            // Advanced timing mode: VPP Map, subaddress 0x5b, bit 7 (negative)
+#if 0
+            I2C_WRITE(vpp_address, 0x5a, alg);
+#endif
         }
 
 #if AVGLPF

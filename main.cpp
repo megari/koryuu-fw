@@ -84,6 +84,9 @@ using koryuu_settings::ConvSettings;
 using koryuu_settings::KoryuuSettings;
 static EEMEM ConvSettings eeprom_settings;
 
+bool interlaced = true;
+DetectedVideoType video_type = NTSC_MJ;
+
 #if ERROR_PANIC
 __attribute__((noreturn))
 static void i2c_err_func(uint8_t addr, uint8_t arg_count)
@@ -146,8 +149,30 @@ static void setup_timer0()
     TIMSK0 = _BV(OCIE0A);
 }
 
-static void setup_encoder()
+static void setup_encoder(bool deinterlace, DetectedVideoType input_vt)
 {
+    uint8_t out_vt = 0x00;
+
+    switch (input_vt) {
+    case NTSC_MJ:
+    case NTSC_443:
+    case PAL_M:
+    case PAL_60:
+    case SECAM_525:
+        // 525i, 60 Hz -> 525p, 60 Hz
+        out_vt = 0x04; // SMPTE 293M, ITU-BT.1358
+        break;
+    case PAL_BGHID:
+    case SECAM:
+    case PAL_CN:
+        // 625i, 50 Hz -> 625p, 50 Hz
+        out_vt = 0x1c; // ITU-BT.1358
+        break;
+    }
+
+    I2C_WRITE(encoder.address, 0x17, 0x02);
+    _delay_ms(10);
+
 #if 0
     // Software reset. Ignore the I2C transaction failure.
     I2C_WRITE<false>(encoder.address, 0x17, 0x02);
@@ -164,14 +189,19 @@ static void setup_encoder()
     // Enable DAC autopower-down (based on cable detection)
     I2C_WRITE(encoder.address, 0x10, 0x10);
 
-#if !ENC_TEST_PATTERN
-    // SD input mode
-    I2C_WRITE(encoder.address, 0x01, 0x00);
-
-    // NTSC, SSAF luma filter, 1.3MHz chroma filter
-    I2C_WRITE(encoder.address, 0x80, 0x10);
+#if 1 || !ENC_TEST_PATTERN
+    if (deinterlace) {
+        //encoder.set_mode0(0x20);
+        encoder.mode_select(0x70); // ED, 54 MHz
+    }
+    else {
+        encoder.mode_select(0x00); // SD input mode
+        // NTSC, SSAF luma filter, 1.3MHz chroma filter
+        I2C_WRITE(encoder.address, 0x80, 0x10);
+    }
 #endif
 
+    if (!deinterlace) {
 #if 0
     // Pixel data valid, YPrPb, PrPb SSAF filter, AVE control, pedestal
     I2C_WRITE(encoder.address, 0x82, 0xc9);
@@ -197,8 +227,14 @@ static void setup_encoder()
     // Enable subcarrier frequency lock
     I2C_WRITE(encoder.address, 0x84, 0x06);
 
-    // Autodetect SD input standard
-    I2C_WRITE(encoder.address, 0x87, 0x20);
+    if (deinterlace) {
+        encoder.set_ed_hd_mode1(out_vt);
+        encoder.set_ed_hd_mode2(0x01); // Pixel data valid
+    }
+    else {
+        // Autodetect SD input standard
+        I2C_WRITE(encoder.address, 0x87, 0x20);
+    }
 
     if (interlace_status == INTERLACE_STATUS_INTERLACED) {
         // Disable SD progressive mode
@@ -226,9 +262,13 @@ static void setup_encoder()
 #endif
 
 #if ENC_TEST_PATTERN
-    // Color bar test pattern
-    I2C_WRITE(encoder.address, 0x84, 0x40);
+    if (!deinterlace) {
+        // Color bar test pattern
+        I2C_WRITE(encoder.address, 0x84, 0x40);
+    }
 #endif
+    }
+    // TODO: register 0x99, SD CGMS/WSS settings
 }
 
 static inline void setup_ad_black_magic()
@@ -286,8 +326,15 @@ static void set_smoothing(PhysInput input, bool smoothing)
     decoder.set_aa_filters(!smoothing, false, false, false, false);
 }
 
-static void setup_video(PhysInput input, bool pedestal, bool smoothing)
+static void setup_video(PhysInput input, bool pedestal, bool smoothing,
+                        bool progressive, bool deinterlace,
+                        DetectedVideoType input_vt)
 {
+    I2P_Algorithm i2p_alg = I2P_ALG_DEINTERLACE;
+
+    if (deinterlace && progressive)
+        i2p_alg = I2P_ALG_LINEDOUBLE;
+
     // Software reset decoder and encoder.
     // Ignore the I2C transaction failure.
     decoder.set_power_management(false, true);
@@ -380,6 +427,8 @@ static void setup_video(PhysInput input, bool pedestal, bool smoothing)
         I2C_WRITE(decoder.address, 0x13, 0x00);
     }
 
+//XXX: temporarily disable these
+#if 0
     // Analog clamp control
     // 100% color bars
     I2C_WRITE(decoder.address, 0x14, 0x11);
@@ -390,6 +439,7 @@ static void setup_video(PhysInput input, bool pedestal, bool smoothing)
 
     // Optional smoothing
     set_smoothing(input, smoothing);
+#endif
 
 #if 0
     // Comb filter control
@@ -401,6 +451,7 @@ static void setup_video(PhysInput input, bool pedestal, bool smoothing)
     // LLC pin active
     I2C_WRITE(decoder.address, 0x1d, 0x40);
 
+if (!deinterlace) {
     // VS/FIELD Control 1
     // EAV/SAV codes generated for Analog Devices encoder
     I2C_WRITE(decoder.address, 0x31, 0x02);
@@ -422,9 +473,17 @@ static void setup_video(PhysInput input, bool pedestal, bool smoothing)
     // Low drive strength for all
     I2C_WRITE(decoder.address, 0xf4, 0x00);
 #endif
+}
+
+    if (deinterlace)
+        decoder.deinterlace_control(true, i2p_alg);
+#if 0
+    else
+        decoder.deinterlace_reset();
+#endif
 
     // Encoder setup
-    setup_encoder();
+    setup_encoder(deinterlace, input_vt);
 }
 
 #if DEBUG > 1
@@ -556,7 +615,8 @@ int main(void)
     curr_input = settings.settings.default_input;
     disable_freerun = !!settings.settings.disable_free_run;
     setup_video(input_to_phys[curr_input],
-        input_to_pedestal[curr_input], !!settings.settings.smoothing);
+        input_to_pedestal[curr_input], !!settings.settings.smoothing,
+        !interlaced, /* deinterlace? */ false, video_type);
     led_CVBS = input_to_phys[curr_input] == INPUT_CVBS;
     led_YC = input_to_phys[curr_input] == INPUT_SVIDEO;
     led_OPT = !!settings.settings.smoothing;
@@ -587,6 +647,8 @@ int main(void)
     uint8_t dec_status2 = 0x00;
 #endif
     uint8_t dec_status3 = 0x00;
+    bool i2p_enabled = false;
+
     bool got_interrupt = false;
     bool check_once_more = true;
     while (1) {
@@ -640,28 +702,50 @@ int main(void)
             switch (curr_input) {
             case CVBS:
 #if DEBUG
-                serial << _T("Transition: CVBS -> CVBS_PEDESTAL\r\n");
+                serial << _T("Transition: CVBS -> CVBS + I2P\r\n");
 #endif
                 //interlace_status = INTERLACE_STATUS_UNKNOWN;
-                decoder.select_autodetection(AD_PALBGHID_NTSCM_SECAM);
+                //decoder.select_autodetection(AD_PALBGHID_NTSCM_SECAM);
+                setup_video(INPUT_CVBS, false, false, !interlaced, true, video_type);
+                i2p_enabled = true;
+#if DEBUG
+                serial << _T("I2P enabled\r\n");
+                serial << (interlaced ? _T("interlaced") : _T("progressive")) << _T("\r\n");
+#endif
+                //setup_video(INPUT_CVBS, false, true);
+                //set_smoothing(INPUT_CVBS, true);
                 curr_input = CVBS_PEDESTAL;
                 break;
             case CVBS_PEDESTAL:
 #if DEBUG
-                serial << _T("Transition: CVBS_PEDESTAL -> SVIDEO\r\n");
+                serial << _T("Transition: CVBS + I2P -> SVIDEO\r\n");
 #endif
                 interlace_status = INTERLACE_STATUS_UNKNOWN;
                 freerun_status = FREERUN_STATUS_UNKNOWN;
-                setup_video(INPUT_SVIDEO, false, false);
+                setup_video(INPUT_SVIDEO, false, false, !interlaced, false, video_type);
+                i2p_enabled = false;
+#if DEBUG
+                serial << _T("I2P disabled\r\n");
+                serial << (interlaced ? _T("interlaced") : _T("progressive")) << _T("\r\n");
+#endif
                 curr_input = SVIDEO;
+                //setup_video(INPUT_CVBS, false, false);
+                //set_smoothing(INPUT_CVBS, false);
+                //curr_input = CVBS;
                 led_CVBS = false;
                 led_YC = true;
                 break;
             case SVIDEO:
 #if DEBUG
-                serial << _T("Transition: SVIDEO -> SVIDEO_PEDESTAL\r\n");
+                serial << _T("Transition: SVIDEO -> SVIDEO + I2P\r\n");
 #endif
-                decoder.select_autodetection(AD_PALBGHID_NTSCM_SECAM);
+                //decoder.select_autodetection(AD_PALBGHID_NTSCM_SECAM);
+                setup_video(INPUT_SVIDEO, false, false, !interlaced, true, video_type);
+                i2p_enabled = true;
+#if DEBUG
+                serial << _T("I2P enabled\r\n");
+                serial << (interlaced ? _T("interlaced") : _T("progressive")) << _T("\r\n");
+#endif
                 curr_input = SVIDEO_PEDESTAL;
                 break;
             case SVIDEO_PEDESTAL:
@@ -670,8 +754,14 @@ int main(void)
 #endif
                 interlace_status = INTERLACE_STATUS_UNKNOWN;
                 freerun_status = FREERUN_STATUS_UNKNOWN;
-                setup_video(INPUT_CVBS, false, false);
+                //setup_video(INPUT_CVBS, false, false);
+                setup_video(INPUT_CVBS, false, false, !interlaced, false, video_type);
                 curr_input = CVBS;
+                i2p_enabled = false;
+#if DEBUG
+                serial << _T("I2P disabled\r\n");
+                serial << (interlaced ? _T("interlaced") : _T("progressive")) << _T("\r\n");
+#endif
                 led_CVBS = true;
                 led_YC = false;
                 break;
@@ -695,7 +785,7 @@ int main(void)
 
         got_interrupt = !decoder.intrq;
 
-        if (got_interrupt || check_once_more ||
+        if (true || got_interrupt || check_once_more ||
             interlace_status == INTERLACE_STATUS_UNKNOWN ||
             freerun_status == FREERUN_STATUS_UNKNOWN)
         {
@@ -731,10 +821,12 @@ int main(void)
 #endif
             const uint8_t new_status3 = I2C_READ_ONE(decoder.address, 0x13);
             uint8_t encoder_setup_needed = false;
+            DetectedVideoType old_video_type = video_type;
 
             if (new_status1 != dec_status1) {
                 const uint8_t new_vstd = (new_status1 >> 4u) & 0x07u;
 
+                video_type = static_cast<DetectedVideoType>((new_status1 >> 4) & 0x07);
                 if (dec_vstd != 0xffu)
                     dec_vstd = (dec_status1 >> 4u) & 0x07u;
 #if DEBUG
@@ -748,30 +840,34 @@ int main(void)
                 serial << _T("Follow PW: ") << asdec(!!(new_status1 & 0x08))
                     << _T("\r\n");
                 serial << _T("Video standard: ");
-                switch (new_vstd) {
-                case 0x00:
+
+                switch (video_type) {
+                case NTSC_MJ:
                     serial << _T("NTSC M/J\r\n");
                     break;
-                case 0x01:
+                case NTSC_443:
                     serial << _T("NTSC 4.43\r\n");
                     break;
-                case 0x02:
+                case PAL_M:
                     serial << _T("PAL M\r\n");
                     break;
-                case 0x03:
+                case PAL_60:
                     serial << _T("PAL 60\r\n");
                     break;
-                case 0x04:
+                case PAL_BGHID:
                     serial << _T("PAL B/G/H/I/D\r\n");
                     break;
-                case 0x05:
+                case SECAM:
                     serial << _T("SECAM\r\n");
                     break;
-                case 0x06:
+                case PAL_CN:
                     serial << _T("PAL Combination N\r\n");
                     break;
-                case 0x07:
+                case SECAM_525:
                     serial << _T("SECAM 525\r\n");
+                    break;
+                default:
+                    serial << _T("Invalid video standard!");
                     break;
                 }
                 serial << _T("Color kill: ") << asdec(!!(new_status1 & 0x80))
@@ -843,6 +939,30 @@ int main(void)
                     << asdec(!!(new_status3 & 0x80)) << _T("\r\n");
                 serial << _T("\r\n");
 #endif
+
+                if (/*interlaced &&*/ !(new_status3 & 0x40)) {
+                    if (i2p_enabled) {
+                        serial << _T("I2P enabled, linedoubling\r\n");
+                        decoder.deinterlace_control(true, I2P_ALG_LINEDOUBLE);
+                        setup_encoder(true, video_type);
+                    }
+                    else {
+                        // Enable SD progressive mode (for allowing 240p/288p)
+                        I2C_WRITE(encoder.address, 0x88, 0x02);
+                    }
+                }
+                else if (/*!interlaced &&*/ !!(new_status3 & 0x40)) {
+                    if (i2p_enabled) {
+                        serial << _T("I2P enabled, deinterlacing\r\n");
+                        decoder.deinterlace_control(true, I2P_ALG_DEINTERLACE);
+                        setup_encoder(true, video_type);
+                    }
+                    else {
+                        // Disable SD progressive mode
+                        I2C_WRITE(encoder.address, 0x88, 0x00);
+                    }
+                }
+                interlaced = !!(new_status3 & 0x40);
             }
             dec_status3 = new_status3;
             bool ilace_flag = !!(dec_status3 & 0x40);
@@ -867,9 +987,11 @@ int main(void)
                 interlace_status = INTERLACE_STATUS_PROGRESSIVE;
                 encoder_setup_needed = true;
             }
+            else if (video_type != old_video_type)
+                encoder_setup_needed = true;
 
             if (encoder_setup_needed)
-                setup_encoder();
+                setup_encoder(i2p_enabled, video_type);
 
             // Clear all interrupt flags...
             if (got_interrupt) {
