@@ -70,6 +70,17 @@ namespace ad_decoder {
         ID_MUST_CLEAR = 0xc0,
     };
 
+    enum DetectedVideoType : uint8_t {
+        NTSC_MJ   = 0x00,
+        NTSC_443  = 0x01,
+        PAL_M     = 0x02,
+        PAL_60    = 0x03,
+        PAL_BGHID = 0x04,
+        SECAM     = 0x05,
+        PAL_CN    = 0x06,
+        SECAM_525 = 0x07,
+    };
+
     constexpr uint8_t OUTC_TOD    = 0x40;
     constexpr uint8_t OUTC_VBI_EN = 0x80;
 
@@ -138,7 +149,8 @@ namespace ad_decoder {
 
         void set_ext_output_control(bool full_range, bool enable_sfl,
                 bool blank_chroma_vbi, bool enable_timing_out, bool bt656_4) {
-            uint8_t ext_outc[] = { 0x04, 0x30 };
+            //uint8_t ext_outc[] = { 0x04, 0x30 };
+            uint8_t ext_outc[] = { 0x04, 0x00 };
             if (full_range)
                 ext_outc[1] |= EOUTC_RANGE_FULL;
             if (enable_sfl)
@@ -175,20 +187,41 @@ namespace ad_decoder {
         }
 
         void deinterlace_reset() {
-            // TODO
-            // VPP slave address: User sub map, subaddress 0xfd, bits 6:0
+            // VPP slave address: User sub map, subaddress 0xfd, bits 7:1
+            uint8_t vpp_sla[] = { 0xfd, vpp_address };
+            I2c_HW.write_multi(address, vpp_sla, vpp_sla + sizeof(vpp_sla));
+
             // VPP Map, subaddress 0x41, bit 0
+            uint8_t vpp_rst[] = { 0x41, 0x01 };
+            I2c_HW.write_multi(vpp_address, vpp_rst, vpp_rst + sizeof(vpp_rst));
         }
 
         void deinterlace_control(bool enable,
                 I2P_Algorithm alg = I2P_ALG_DEINTERLACE) {
-            // TODO
-            // VPP slave address: User sub map, subaddress 0xfd, bits 6:0
+
+            // VPP slave address: User sub map, subaddress 0xfd, bits 7:1
+            uint8_t vpp_sla[] = { 0xfd, vpp_address };
+            I2c_HW.write_multi(address, vpp_sla, vpp_sla + sizeof(vpp_sla));
+
+            // ADI required write
+            uint8_t adi_req[] = { 0xa3, 0x00 };
+            I2c_HW.write_multi(vpp_address, adi_req, adi_req + sizeof(adi_req));
+
+            // Advanced timing mode: VPP Map, subaddress 0x5b, bit 7 (negative)
+            uint8_t atm_enable[] = { 0x5b, enable ? 0x00 : 0x80 };
+            I2c_HW.write_multi(vpp_address, atm_enable, atm_enable + sizeof(atm_enable));
+
             // Deinterlace enable: VPP Map, subaddress 0x55, bit 7
+            uint8_t i2p_enable[] = { 0x55, enable ? 0x80 : 0x00 };
+            I2c_HW.write_multi(vpp_address, i2p_enable, i2p_enable + sizeof(i2p_enable));
+
             // Algorithm selection (undocumented): VPP Map, subaddress 0x5a, bits 4:3
             //     0b00: Simple line doubling
             //     0b11: Proprietary deinterlacing algorithm
-            // Advanced timing mode: VPP Map, subaddress 0x5b, bit 7 (negative)
+#if 0
+            uint8_t i2p_alg[] = { 0x5a, alg };
+            I2c_HW.write_multi(vpp_address, i2p_alg, i2p_alg + sizeof(i2p_alg));
+#endif
         }
 
 #if AVGLPF
