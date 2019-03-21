@@ -115,7 +115,7 @@ namespace ad_decoder {
         uint8_t vpp_address;
 
         ADV7280A(uint8_t addr, uint8_t vpp_addr = 0x84)
-            : address(addr), vpp_address(vpp_addr) {
+            : address(addr), vpp_address(vpp_addr >> 1) {
             intrq.mode = INPUT_PULLUP;
             reset.mode = OUTPUT;
             reset = false;
@@ -188,7 +188,7 @@ namespace ad_decoder {
 
         void deinterlace_reset() {
             // VPP slave address: User sub map, subaddress 0xfd, bits 7:1
-            uint8_t vpp_sla[] = { 0xfd, vpp_address };
+            uint8_t vpp_sla[] = { 0xfd, vpp_address << 1 };
             I2c_HW.write_multi(address, vpp_sla, vpp_sla + sizeof(vpp_sla));
 
             // VPP Map, subaddress 0x41, bit 0
@@ -200,7 +200,7 @@ namespace ad_decoder {
                 I2P_Algorithm alg = I2P_ALG_DEINTERLACE) {
 
             // VPP slave address: User sub map, subaddress 0xfd, bits 7:1
-            uint8_t vpp_sla[] = { 0xfd, vpp_address };
+            uint8_t vpp_sla[] = { 0xfd, vpp_address << 1 };
             I2c_HW.write_multi(address, vpp_sla, vpp_sla + sizeof(vpp_sla));
 
             // ADI required write
@@ -218,7 +218,7 @@ namespace ad_decoder {
             // Algorithm selection (undocumented): VPP Map, subaddress 0x5a, bits 4:3
             //     0b00: Simple line doubling
             //     0b11: Proprietary deinterlacing algorithm
-#if 0
+#if 1
             uint8_t i2p_alg[] = { 0x5a, alg };
             I2c_HW.write_multi(vpp_address, i2p_alg, i2p_alg + sizeof(i2p_alg));
 #endif
