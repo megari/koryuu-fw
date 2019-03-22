@@ -189,9 +189,9 @@ static void setup_encoder(bool deinterlace, DetectedVideoType input_vt)
     // Enable DAC autopower-down (based on cable detection)
     I2C_WRITE(encoder.address, 0x10, 0x10);
 
-#if 1 || !ENC_TEST_PATTERN
+#if !ENC_TEST_PATTERN
     if (deinterlace) {
-        //encoder.set_mode0(0x20);
+        encoder.set_mode0(0x20);
         encoder.mode_select(0x70); // ED, 54 MHz
     }
     else {
@@ -427,8 +427,7 @@ static void setup_video(PhysInput input, bool pedestal, bool smoothing,
         I2C_WRITE(decoder.address, 0x13, 0x00);
     }
 
-//XXX: temporarily disable these
-#if 0
+#if 1
     // Analog clamp control
     // 100% color bars
     I2C_WRITE(decoder.address, 0x14, 0x11);
@@ -451,7 +450,7 @@ static void setup_video(PhysInput input, bool pedestal, bool smoothing,
     // LLC pin active
     I2C_WRITE(decoder.address, 0x1d, 0x40);
 
-if (!deinterlace) {
+if (true || !deinterlace) {
     // VS/FIELD Control 1
     // EAV/SAV codes generated for Analog Devices encoder
     I2C_WRITE(decoder.address, 0x31, 0x02);
@@ -475,9 +474,23 @@ if (!deinterlace) {
 #endif
 }
 
-    if (deinterlace)
-        decoder.deinterlace_control(true, i2p_alg);
+    if (deinterlace) {
 #if 0
+        // PAL field hack
+        I2C_WRITE(decoder.address, 0xea, 0x03);
+#endif
+#if 0
+        // PAL vsync hack 1
+        I2C_WRITE(decoder.address, 0xe8, 0x05);
+#endif
+#if 0
+        // PAL vsync hack 2
+        I2C_WRITE(decoder.address, 0xe9, 0x14);
+#endif
+
+        decoder.deinterlace_control(true, i2p_alg);
+    }
+#if 1
     else
         decoder.deinterlace_reset();
 #endif
@@ -940,24 +953,32 @@ int main(void)
                 serial << _T("\r\n");
 #endif
 
-                if (/*interlaced &&*/ !(new_status3 & 0x40)) {
+                if (interlaced && !(new_status3 & 0x40)) {
                     if (i2p_enabled) {
                         serial << _T("I2P enabled, linedoubling\r\n");
+                        decoder.deinterlace_reset();
                         decoder.deinterlace_control(true, I2P_ALG_LINEDOUBLE);
                         setup_encoder(true, video_type);
+                        // Enable SD progressive mode (for allowing 240p/288p)
+                        //I2C_WRITE(encoder.address, 0x88, 0x02);
                     }
                     else {
+                        serial << _T("I2P disabled, enabling progressive mode\r\n");
                         // Enable SD progressive mode (for allowing 240p/288p)
                         I2C_WRITE(encoder.address, 0x88, 0x02);
                     }
                 }
-                else if (/*!interlaced &&*/ !!(new_status3 & 0x40)) {
+                else if (!interlaced && !!(new_status3 & 0x40)) {
                     if (i2p_enabled) {
                         serial << _T("I2P enabled, deinterlacing\r\n");
+                        decoder.deinterlace_reset();
                         decoder.deinterlace_control(true, I2P_ALG_DEINTERLACE);
                         setup_encoder(true, video_type);
+                        // Disable SD progressive mode
+                        //I2C_WRITE(encoder.address, 0x88, 0x00);
                     }
                     else {
+                        serial << _T("I2P disabled, disabling progressive mode\r\n");
                         // Disable SD progressive mode
                         I2C_WRITE(encoder.address, 0x88, 0x00);
                     }
@@ -987,8 +1008,10 @@ int main(void)
                 interlace_status = INTERLACE_STATUS_PROGRESSIVE;
                 encoder_setup_needed = true;
             }
+#if 0
             else if (video_type != old_video_type)
                 encoder_setup_needed = true;
+#endif
 
             if (encoder_setup_needed)
                 setup_encoder(i2p_enabled, video_type);
