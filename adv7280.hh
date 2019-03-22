@@ -149,8 +149,7 @@ namespace ad_decoder {
 
         void set_ext_output_control(bool full_range, bool enable_sfl,
                 bool blank_chroma_vbi, bool enable_timing_out, bool bt656_4) {
-            //uint8_t ext_outc[] = { 0x04, 0x30 };
-            uint8_t ext_outc[] = { 0x04, 0x00 };
+            uint8_t ext_outc[] = { 0x04, 0x30 };
             if (full_range)
                 ext_outc[1] |= EOUTC_RANGE_FULL;
             if (enable_sfl)

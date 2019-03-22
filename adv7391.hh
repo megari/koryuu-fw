@@ -20,13 +20,6 @@ namespace ad_encoder {
 	    }
 
         void mode_select(uint8_t value) {
-            /*
-                56 17 02 ; Software Reset [Encoder Writes Begin]
-                56 00 9C ; Power up DAC's and PLL
-                56 01 70 ; ED at 54MHz input
-                56 30 1C ; 625p at 50 Hz with Embedded Timing
-                56 31 01 ; Pixel Data Valid [Encoder Writes finished]
-            */
             uint8_t mode[] = { 0x01, value };
             I2c_HW.write_multi(address, mode, mode + sizeof(mode));
         }
@@ -50,7 +43,7 @@ namespace ad_encoder {
             uint8_t mode[] = { 0x32, value };
             I2c_HW.write_multi(address, mode, mode + sizeof(mode));
         }
-	};
+    };
 }
 
 #endif
