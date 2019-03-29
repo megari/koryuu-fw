@@ -163,10 +163,11 @@ static void setup_encoder(bool deinterlace, DetectedVideoType input_vt)
     //uint8_t seq_1_1[] = { 0x00, 0x9c };
     I2c_HW.write_multi(encoder.address, seq_1_1, seq_1_1 + sizeof(seq_1_1));
 #endif
-
+#if 0
     // Enable DAC autopower-down (based on cable detection)
     uint8_t seq_apd[] = { 0x10, 0x10 };
     I2c_HW.write_multi(encoder.address, seq_apd, seq_apd + sizeof(seq_apd));
+#endif
 
 #if !ENC_TEST_PATTERN
     if (deinterlace) {
@@ -205,6 +206,15 @@ static void setup_encoder(bool deinterlace, DetectedVideoType input_vt)
 
     if (deinterlace) {
         encoder.set_ed_hd_mode1(out_vt);
+
+// Desperation...
+#if 0
+{
+        uint8_t argh[] = { 0x34, 0x08 };
+        I2c_HW.write_multi(encoder.address, argh, argh + sizeof(argh));
+}
+#endif
+
         encoder.set_ed_hd_mode2(0x01); // Pixel data valid
     }
     else {
@@ -387,9 +397,32 @@ static void setup_video(ConvInputSelection input, bool pedestal, bool smoothing,
 
 if (true || !deinterlace) {
     // VS/FIELD Control 1
+    if (!deinterlace || !progressive) {
     // EAV/SAV codes generated for Analog Devices encoder
     uint8_t vs_fieldc[] = { 0x31, 0x02 };
     I2c_HW.write_multi(decoder.address, vs_fieldc, vs_fieldc + sizeof(vs_fieldc));
+    }
+    else if (deinterlace && progressive) {
+    uint8_t vs_fieldc[] = { 0x31, 0x12 };
+    I2c_HW.write_multi(decoder.address, vs_fieldc, vs_fieldc + sizeof(vs_fieldc));
+
+#if 0
+    uint8_t vs_fieldc2[] = { 0x32, 0x01 };
+    I2c_HW.write_multi(decoder.address, vs_fieldc2, vs_fieldc2 + sizeof(vs_fieldc2));
+
+    uint8_t vs_fieldc3[] = { 0x33, 0xc4 };
+    I2c_HW.write_multi(decoder.address, vs_fieldc2, vs_fieldc2 + sizeof(vs_fieldc2));
+#endif
+
+#if 0
+{
+    uint8_t pol_hack[] = { 0x37, 0x09 };
+    I2c_HW.write_multi(decoder.address, pol_hack, pol_hack + 2);
+}
+#endif
+
+
+    }
 
     // CTI DNR control
     // Disable CTI and CTI alpha blender, enable DNR
@@ -400,6 +433,7 @@ if (true || !deinterlace) {
     uint8_t out_sync_sel2[] = { 0x6b, 0x14 };
     I2c_HW.write_multi(decoder.address, out_sync_sel2, out_sync_sel2 + 2);
 
+
 #if 0
     // Drive strength of digital outputs
     // Low drive strength for all
@@ -409,6 +443,7 @@ if (true || !deinterlace) {
 }
 
     if (deinterlace) {
+        if (progressive) {
 #if 0
         uint8_t pal_field_hack[] = { 0xea, 0x03 };
         I2c_HW.write_multi(decoder.address, pal_field_hack, pal_field_hack + 2);
@@ -421,6 +456,7 @@ if (true || !deinterlace) {
         uint8_t pal_vsync2_hack[] = { 0xe9, 0x14 };
         I2c_HW.write_multi(decoder.address, pal_vsync2_hack, pal_vsync2_hack + 2);
 #endif
+        }
 
         decoder.deinterlace_control(true, i2p_alg);
     }
@@ -493,6 +529,66 @@ int main(void)
 #if DEBUG
     serial << _T("converter starting...\r\n");
 #endif
+
+#define I2C_WRITE_2(addr, val1, val2) do { \
+        uint8_t tempfoo[] = { (val1), (val2) }; \
+        I2c_HW.write_multi(addr, tempfoo, tempfoo + 2); \
+    } while (0)
+if (false) {
+    uint8_t dec_rst[] = { 0x0f, 0x80 };
+    I2c_HW.write_multi(decoder.address, dec_rst, dec_rst + 2);
+    uint8_t enc_rst[] = { 0x17, 0x02 };
+    I2c_HW.write_multi(encoder.address, enc_rst, enc_rst + 2);
+
+    _delay_ms(10);
+
+    I2C_WRITE_2(decoder.address, 0x0f, 0x00);
+    I2C_WRITE_2(decoder.address, 0x52, 0xcd);
+    I2C_WRITE_2(decoder.address, 0x00, 0x00);
+    I2C_WRITE_2(decoder.address, 0x0e, 0x80);
+    I2C_WRITE_2(decoder.address, 0x9c, 0x00);
+    I2C_WRITE_2(decoder.address, 0x9c, 0xff);
+    I2C_WRITE_2(decoder.address, 0x0e, 0x00);
+    I2C_WRITE_2(decoder.address, 0x80, 0x51);
+    I2C_WRITE_2(decoder.address, 0x81, 0x51);
+    I2C_WRITE_2(decoder.address, 0x82, 0x68);
+    I2C_WRITE_2(decoder.address, 0x17, 0x41);
+    I2C_WRITE_2(decoder.address, 0x03, 0x0c);
+    I2C_WRITE_2(decoder.address, 0x04, 0x07);
+    I2C_WRITE_2(decoder.address, 0x13, 0x00);
+    I2C_WRITE_2(decoder.address, 0x1d, 0x40);
+
+    I2C_WRITE_2(decoder.address, 0x31, 0x12);
+#if 1
+    /*
+    I2C_WRITE_2(decoder.address, 0xe5, 0x05); // NTSC V bit begin
+    I2C_WRITE_2(decoder.address, 0xe6, 0x04); // NTSC V bit end
+    I2C_WRITE_2(decoder.address, 0xe7, 0x43); // NTSC F bit toggle
+    */
+
+    I2C_WRITE_2(decoder.address, 0x32, 0x41);
+    I2C_WRITE_2(decoder.address, 0x33, 0x84);
+
+
+    I2C_WRITE_2(decoder.address, 0xe8, 0x45); // PAL V bit begin
+    I2C_WRITE_2(decoder.address, 0xe9, 0x54); // PAL V bit end
+    I2C_WRITE_2(decoder.address, 0xea, 0x43); // PAL F bit toggle
+#endif
+    //I2C_WRITE_2(decoder.address, 0x31, 0x02);
+
+    I2C_WRITE_2(decoder.address, 0xfd, 0x84);
+    I2C_WRITE_2(decoder.vpp_address, 0xa3, 0x00);
+    I2C_WRITE_2(decoder.vpp_address, 0x5a, 0x00); // linedouble
+    I2C_WRITE_2(decoder.vpp_address, 0x5b, 0x00);
+    I2C_WRITE_2(decoder.vpp_address, 0x55, 0x80);
+    I2C_WRITE_2(encoder.address, 0x17, 0x02);
+    I2C_WRITE_2(encoder.address, 0x00, 0x9c);
+    I2C_WRITE_2(encoder.address, 0x01, 0x70);
+    I2C_WRITE_2(encoder.address, 0x30, 0x1c);
+    I2C_WRITE_2(encoder.address, 0x31, 0x01);
+
+    while (true) ;
+}
 
     setup_video(INPUT_CVBS, false, false, !interlaced, false, video_type);
     curr_input = CVBS;
