@@ -185,9 +185,10 @@ static void setup_encoder(bool deinterlace, DetectedVideoType input_vt)
     // All DACs enabled, PLL disabled (only 2x oversampling)
     I2C_WRITE(encoder.address, 0x00, 0x1e);
 #endif
-
+#if 0
     // Enable DAC autopower-down (based on cable detection)
     I2C_WRITE(encoder.address, 0x10, 0x10);
+#endif
 
 #if !ENC_TEST_PATTERN
     if (deinterlace) {
@@ -229,6 +230,14 @@ static void setup_encoder(bool deinterlace, DetectedVideoType input_vt)
 
     if (deinterlace) {
         encoder.set_ed_hd_mode1(out_vt);
+
+// Desperation...
+#if 0
+{
+        I2C_WRITE(encoder.address, 0x34, 0x08);
+}
+#endif
+
         encoder.set_ed_hd_mode2(0x01); // Pixel data valid
     }
     else {
@@ -452,8 +461,27 @@ static void setup_video(PhysInput input, bool pedestal, bool smoothing,
 
 if (true || !deinterlace) {
     // VS/FIELD Control 1
+    if (!deinterlace || !progressive) {
     // EAV/SAV codes generated for Analog Devices encoder
     I2C_WRITE(decoder.address, 0x31, 0x02);
+    }
+    else if (deinterlace && progressive) {
+    I2C_WRITE(decoder.address, 0x31, 0x12);
+
+#if 0
+    I2C_WRITE(decoder.address, 0x32, 0x01);
+
+    I2C_WRITE(decoder.address, 0x33, 0xc4);
+#endif
+
+#if 0
+{
+    I2C_WRITE(decoder.address, 0x37, 0x09);
+}
+#endif
+
+
+    }
 
     // CTI DNR control
     // Disable CTI and CTI alpha blender, enable DNR
@@ -467,6 +495,7 @@ if (true || !deinterlace) {
     // Force the free run mode video standard to 480i.
     decoder.set_vs_mode_control(true, true, COAST_MODE_480I);
 
+
 #if 0
     // Drive strength of digital outputs
     // Low drive strength for all
@@ -475,6 +504,7 @@ if (true || !deinterlace) {
 }
 
     if (deinterlace) {
+        if (progressive) {
 #if 0
         // PAL field hack
         I2C_WRITE(decoder.address, 0xea, 0x03);
@@ -487,6 +517,7 @@ if (true || !deinterlace) {
         // PAL vsync hack 2
         I2C_WRITE(decoder.address, 0xe9, 0x14);
 #endif
+        }
 
         decoder.deinterlace_control(true, i2p_alg);
     }
@@ -616,6 +647,60 @@ int main(void)
         << _T("\r\n");
     serial << _T("Settings crc32: 0x") << ashex(settings_crc32) << _T("\r\n");
 #endif
+
+if (false) {
+    I2C_WRITE(decoder.address, 0x0f, 0x80);
+    I2C_WRITE(encoder.address, 0x17, 0x02);
+
+    _delay_ms(10);
+
+    I2C_WRITE(decoder.address, 0x0f, 0x00);
+    I2C_WRITE(decoder.address, 0x52, 0xcd);
+    I2C_WRITE(decoder.address, 0x00, 0x00);
+    I2C_WRITE(decoder.address, 0x0e, 0x80);
+    I2C_WRITE(decoder.address, 0x9c, 0x00);
+    I2C_WRITE(decoder.address, 0x9c, 0xff);
+    I2C_WRITE(decoder.address, 0x0e, 0x00);
+    I2C_WRITE(decoder.address, 0x80, 0x51);
+    I2C_WRITE(decoder.address, 0x81, 0x51);
+    I2C_WRITE(decoder.address, 0x82, 0x68);
+    I2C_WRITE(decoder.address, 0x17, 0x41);
+    I2C_WRITE(decoder.address, 0x03, 0x0c);
+    I2C_WRITE(decoder.address, 0x04, 0x07);
+    I2C_WRITE(decoder.address, 0x13, 0x00);
+    I2C_WRITE(decoder.address, 0x1d, 0x40);
+
+    I2C_WRITE(decoder.address, 0x31, 0x12);
+#if 1
+    /*
+    I2C_WRITE(decoder.address, 0xe5, 0x05); // NTSC V bit begin
+    I2C_WRITE(decoder.address, 0xe6, 0x04); // NTSC V bit end
+    I2C_WRITE(decoder.address, 0xe7, 0x43); // NTSC F bit toggle
+    */
+
+    I2C_WRITE(decoder.address, 0x32, 0x41);
+    I2C_WRITE(decoder.address, 0x33, 0x84);
+
+
+    I2C_WRITE(decoder.address, 0xe8, 0x45); // PAL V bit begin
+    I2C_WRITE(decoder.address, 0xe9, 0x54); // PAL V bit end
+    I2C_WRITE(decoder.address, 0xea, 0x43); // PAL F bit toggle
+#endif
+    //I2C_WRITE(decoder.address, 0x31, 0x02);
+
+    I2C_WRITE(decoder.address, 0xfd, 0x84);
+    I2C_WRITE(decoder.vpp_address, 0xa3, 0x00);
+    I2C_WRITE(decoder.vpp_address, 0x5a, 0x00); // linedouble
+    I2C_WRITE(decoder.vpp_address, 0x5b, 0x00);
+    I2C_WRITE(decoder.vpp_address, 0x55, 0x80);
+    I2C_WRITE(encoder.address, 0x17, 0x02);
+    I2C_WRITE(encoder.address, 0x00, 0x9c);
+    I2C_WRITE(encoder.address, 0x01, 0x70);
+    I2C_WRITE(encoder.address, 0x30, 0x1c);
+    I2C_WRITE(encoder.address, 0x31, 0x01);
+
+    while (true) ;
+}
 
     // If the settings were (re-)initialized, write them back to EEPROM.
     if (settings.is_dirty()) {
