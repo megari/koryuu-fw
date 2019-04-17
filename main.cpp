@@ -225,6 +225,11 @@ static void set_smoothing(ConvInputSelection input, bool smoothing)
         uint8_t shafc1[] = { 0x17, 0x41 };
         I2c_HW.write_multi(decoder.address, shafc1, shafc1 + 2);
     }
+    else /* if (input == INPUT_SVIDEO) */ {
+        // Shaping filter control 1, set to default
+        uint8_t shafc1[] = { 0x17, 0x01 };
+        I2c_HW.write_multi(decoder.address, shafc1, shafc1 + 2);
+    }
 
     if (smoothing) {
         // Shaping filter control 2
