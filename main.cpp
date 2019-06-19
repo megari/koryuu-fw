@@ -386,7 +386,7 @@ int main(void)
     I2c_HW.setup();
 
 #if DEBUG || CALIBRATE
-    serial.setup(38400, DATA_EIGHT, STOP_ONE, PARITY_DISABLED);
+    serial.setup(9600, DATA_EIGHT, STOP_ONE, PARITY_DISABLED);
 #endif
 
     sei();
