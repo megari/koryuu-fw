@@ -258,12 +258,12 @@ static void setup_video(ConvInputSelection input, bool pedestal, bool smoothing)
     decoder.set_power_management(false, true);
     uint8_t enc_reset_seq[] = { 0x17, 0x02 };
     I2c_HW.write_multi(encoder.address, enc_reset_seq, enc_reset_seq + sizeof(enc_reset_seq));
-    _delay_ms(10);
 
     // Decoder setup
 
     // Exit powerdown
     decoder.set_power_management(false, false);
+    _delay_ms(10);
 
     // AFE IBIAS (undocumented register, used in recommended scripts)
     if (input == INPUT_CVBS) {
