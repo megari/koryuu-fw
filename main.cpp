@@ -483,10 +483,12 @@ int main(void)
 #if DEBUG
             if (got_interrupt) {
                 serial << _T("Interrupt\r\n");
+                decoder.select_submap(DEC_SUBMAP_INTR_VDP);
                 I2c_HW.write(decoder.address, 0x42, true, false);
                 uint8_t intrs1 = I2c_HW.read(decoder.address);
                 I2c_HW.write(decoder.address, 0x4a, true, false);
                 uint8_t intrs3 = I2c_HW.read(decoder.address);
+                decoder.select_submap(DEC_SUBMAP_USER);
                 serial << _T("Interrupt status 1: 0x") << ashex(intrs1) << _T("\r\n");
                 serial << _T("Interrupt status 3: 0x") << ashex(intrs3) << _T("\r\n");
             }
