@@ -29,6 +29,12 @@ PortB6 led_OPT;
 Serial0 serial;
 #endif
 
+#define I2C_READ_ONE(lval, addr, reg) do { \
+            I2c_HW.write((addr), (reg), true, false); \
+            (lval) = I2c_HW.read(addr); \
+        } while (0)
+
+
 enum {
     CVBS,
     CVBS_PEDESTAL,
@@ -536,6 +542,24 @@ int main(void)
                     break;
                 }
                 serial << _T("Color kill: ") << asdec(!!(new_status1 & 0x80)) << _T("\r\n");
+
+#if 1
+                uint8_t fsc[4] = { 0, 0, 0, 0 };
+                for (uint8_t i = 0; i < 4; ++i)
+                    I2C_READ_ONE(fsc[i], encoder.address, 0x8c + i);
+
+                uint32_t fsc32 = (uint32_t)fsc[3] << 24ul;
+                fsc32 |= (uint32_t)fsc[2] << 16ul;
+                fsc32 |= (uint32_t)fsc[1] << 8ul;
+                fsc32 |= (uint32_t)fsc[0];
+
+                // Actually, the calculation is more involved.
+                // See the ADV7391 datasheet, section "SD Subcarrier frequency
+                // control"
+                serial << _T("Subcarrier frequency reg: 0x") << ashex(fsc32) << _T("\r\n");
+                serial << _T("Subcarrier frequency reg: ") << asdec(fsc32) << _T("\r\n");
+#endif
+
                 serial << _T("\r\n");
             }
             dec_status1 = new_status1;
