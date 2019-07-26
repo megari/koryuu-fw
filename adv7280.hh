@@ -218,13 +218,14 @@ namespace ad_decoder {
         }
 
         void set_interrupt_config(InterruptDriveLevel idl, bool manual_mode,
-                InterruptDuration duration, bool setup_submap = true)
+                uint8_t mvirq_sel, InterruptDuration duration,
+                bool setup_submap = true)
         {
             if (setup_submap)
                 select_submap(DEC_SUBMAP_INTR_VDP);
 
-            uint8_t intrcfg[] = { 0x40, 0x10 };
-            intrcfg[1] |= idl | duration;
+            uint8_t intrcfg[] = { 0x40, 0x00 };
+            intrcfg[1] |= idl | duration | mvirq_sel;
             if (manual_mode)
                 intrcfg[1] |= 0x04;
             I2c_HW.write_multi(address, intrcfg, intrcfg + sizeof(intrcfg));

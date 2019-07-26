@@ -287,11 +287,11 @@ static void setup_video(ConvInputSelection input, bool pedestal, bool smoothing)
     // Setup interrupts:
     // Interrupt on various SD events, active low, active until cleared
     decoder.select_submap(DEC_SUBMAP_INTR_VDP);
-    decoder.set_interrupt_mask1(true, true, true, false, false);
-    decoder.interrupt_clear1(true, true, true, false, false);
+    decoder.set_interrupt_mask1(true, true, true, true, false);
+    decoder.interrupt_clear1(true, true, true, true, false);
     decoder.set_interrupt_mask3(true, true, true, true, true, true, false);
     decoder.interrupt_clear3(true, true, true, true, true, true, false);
-    decoder.set_interrupt_config(IDL_ACTIVE_LOW, false, ID_MUST_CLEAR, false);
+    decoder.set_interrupt_config(IDL_ACTIVE_LOW, false, 0x10, ID_MUST_CLEAR, false);
     decoder.select_submap(DEC_SUBMAP_USER);
 
     // Autodetect SD video mode
@@ -542,6 +542,10 @@ int main(void)
 
             if (new_status2 != dec_status2) {
                 serial << _T("Status 2 changed:\r\n");
+                serial << _T("Macrovision color striping detected: ") << asdec(!!(new_status2 & 0x01)) << _T("\r\n");
+                serial << _T("Macrovision color striping type: ") << asdec(!!(new_status2 & 0x02)) << _T("\r\n");
+                serial << _T("Macrovision pseudo sync pulses detected: ") << asdec(!!(new_status2 & 0x04)) << _T("\r\n");
+                serial << _T("Macrovision AGC pulses detected: ") << asdec(!!(new_status2 & 0x08)) << _T("\r\n");
                 serial << _T("Line length nonstandard: ") << asdec(!!(new_status2 & 0x10)) << _T("\r\n");
                 serial << _T("fSC nonstandard: ") << asdec(!!(new_status2 & 0x20)) << _T("\r\n");
                 serial << _T("\r\n");
@@ -566,7 +570,7 @@ int main(void)
             // Clear all interrupt flags...
             if (got_interrupt) {
                 decoder.select_submap(DEC_SUBMAP_INTR_VDP);
-                decoder.interrupt_clear1(true, true, true, false, false);
+                decoder.interrupt_clear1(true, true, true, true, false);
                 decoder.interrupt_clear3(true, true, true, true, true, true, false);
                 decoder.select_submap(DEC_SUBMAP_USER);
             }
