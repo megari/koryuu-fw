@@ -114,17 +114,17 @@ namespace ad_decoder {
 
         void select_input(InputSelection input) {
             uint8_t insel[] = { 0x00, input };
-            I2c_HW.write_multi(address, insel, insel + sizeof(insel));
+            I2c_HW.write(address, insel, insel + sizeof(insel));
         }
 
         void select_autodetection(AutoDetectSelection ad) {
             uint8_t autodetect[] = { 0x02, ad };
-            I2c_HW.write_multi(address, autodetect, autodetect + sizeof(autodetect));
+            I2c_HW.write(address, autodetect, autodetect + sizeof(autodetect));
         }
 
         void select_submap(DecoderSubmap sm) {
             uint8_t submap[] = { 0x0e, sm };
-            I2c_HW.write_multi(address, submap, submap + sizeof(submap));
+            I2c_HW.write(address, submap, submap + sizeof(submap));
         }
 
         void set_output_control(bool tristate_outputs, bool enable_vbi) {
@@ -133,7 +133,7 @@ namespace ad_decoder {
                 outc[1] |= OUTC_TOD;
             if (enable_vbi)
                 outc[1] |= OUTC_VBI_EN;
-            I2c_HW.write_multi(address, outc, outc + sizeof(outc));
+            I2c_HW.write(address, outc, outc + sizeof(outc));
         }
 
         void set_ext_output_control(bool full_range, bool enable_sfl,
@@ -149,7 +149,7 @@ namespace ad_decoder {
                 ext_outc[1] |= EOUTC_TIM_OE;
             if (bt656_4)
                 ext_outc[1] |= EOUTC_BT656_4;
-            I2c_HW.write_multi(address, ext_outc, ext_outc + sizeof(ext_outc));
+            I2c_HW.write(address, ext_outc, ext_outc + sizeof(ext_outc));
         }
 
         void set_power_management(bool powerdown, bool reset) {
@@ -158,7 +158,7 @@ namespace ad_decoder {
                 pwr_mgmt[1] |= PWRM_PWRDWN;
             if (reset)
                 pwr_mgmt[1] |= PWRM_RESET;
-            I2c_HW.write_multi(address, pwr_mgmt, pwr_mgmt + sizeof(pwr_mgmt));
+            I2c_HW.write(address, pwr_mgmt, pwr_mgmt + sizeof(pwr_mgmt));
         }
 
         void set_cti_dnr_control(bool enable_cti, bool enable_cti_ab, AlphaBlend ab, bool enable_dnr) {
@@ -171,7 +171,7 @@ namespace ad_decoder {
             cti_dnr[1] |= ab;
             if (enable_dnr)
                 cti_dnr[1] |= CTIDNRC_DNR_EN;
-            I2c_HW.write_multi(address, cti_dnr, cti_dnr + sizeof(cti_dnr));
+            I2c_HW.write(address, cti_dnr, cti_dnr + sizeof(cti_dnr));
         }
 
         void deinterlace_reset() {
@@ -198,7 +198,7 @@ namespace ad_decoder {
                 lpf[1] |= 0x02;
             lpf[1] |= (cutoff & 0x07) << 2;
             select_submap(DEC_SUBMAP_USER2);
-            I2c_HW.write_multi(address, lpf, lpf + sizeof(lpf));
+            I2c_HW.write(address, lpf, lpf + sizeof(lpf));
             select_submap(DEC_SUBMAP_USER);
         }
 #endif
@@ -214,7 +214,7 @@ namespace ad_decoder {
                 afec[1] |= AFEC_F3_EN;
             if (f4)
                 afec[1] |= AFEC_F4_EN;
-            I2c_HW.write_multi(address, afec, afec + sizeof(afec));
+            I2c_HW.write(address, afec, afec + sizeof(afec));
         }
 
         void set_interrupt_config(InterruptDriveLevel idl, bool manual_mode,
@@ -228,7 +228,7 @@ namespace ad_decoder {
             intrcfg[1] |= idl | duration | mvirq_sel;
             if (manual_mode)
                 intrcfg[1] |= 0x04;
-            I2c_HW.write_multi(address, intrcfg, intrcfg + sizeof(intrcfg));
+            I2c_HW.write(address, intrcfg, intrcfg + sizeof(intrcfg));
 
             if (setup_submap)
                 select_submap(DEC_SUBMAP_USER);
@@ -250,7 +250,7 @@ namespace ad_decoder {
                 iclr1[1] |= 0x20;
             if (clear_mv_ps_cs)
                 iclr1[1] |= 0x40;
-            I2c_HW.write_multi(address, iclr1, iclr1 + sizeof(iclr1));
+            I2c_HW.write(address, iclr1, iclr1 + sizeof(iclr1));
 
             if (setup_submap)
                 select_submap(DEC_SUBMAP_USER);
@@ -272,7 +272,7 @@ namespace ad_decoder {
                 imsk1[1] |= 0x20;
             if (unmask_mv_ps_cs)
                 imsk1[1] |= 0x40;
-            I2c_HW.write_multi(address, imsk1, imsk1 + sizeof(imsk1));
+            I2c_HW.write(address, imsk1, imsk1 + sizeof(imsk1));
 
             if (setup_submap)
                 select_submap(DEC_SUBMAP_USER);
@@ -302,7 +302,7 @@ namespace ad_decoder {
                 iclr3[1] |= 0x10;
             if (clear_pal_sw_lock_change)
                 iclr3[1] |= 0x20;
-            I2c_HW.write_multi(address, iclr3, iclr3 + sizeof(iclr3));
+            I2c_HW.write(address, iclr3, iclr3 + sizeof(iclr3));
 
             if (setup_submap)
                 select_submap(DEC_SUBMAP_USER);
@@ -332,7 +332,7 @@ namespace ad_decoder {
                 imsk3[1] |= 0x10;
             if (unmask_pal_sw_lock_change)
                 imsk3[1] |= 0x20;
-            I2c_HW.write_multi(address, imsk3, imsk3 + sizeof(imsk3));
+            I2c_HW.write(address, imsk3, imsk3 + sizeof(imsk3));
 
             if (setup_submap)
                 select_submap(DEC_SUBMAP_USER);

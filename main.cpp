@@ -28,12 +28,7 @@ PortB6 led_OPT;
 #if DEBUG
 Serial0 serial;
 #endif
-
-#define I2C_READ_ONE(lval, addr, reg) do { \
-            I2c_HW.write((addr), (reg), true, false); \
-            (lval) = I2c_HW.read(addr); \
-        } while (0)
-
+#include "i2c_helpers.hh"
 
 enum {
     CVBS,
@@ -136,60 +131,48 @@ static void setup_encoder()
 {
 #if 0
     // All DACs and PLL enabled
-    uint8_t seq_1_1[] = { 0x00, 0x1c };
-    I2c_HW.write_multi(encoder.address, seq_1_1, seq_1_1 + sizeof(seq_1_1));
+    I2C_WRITE(encoder.address, 0x00, 0x1c);
 #else
     // All DACs enabled, PLL disabled (only 2x oversampling)
-    uint8_t seq_1_1[] = { 0x00, 0x1e };
-    I2c_HW.write_multi(encoder.address, seq_1_1, seq_1_1 + sizeof(seq_1_1));
+    I2C_WRITE(encoder.address, 0x00, 0x1e);
 #endif
 
     // Enable DAC autopower-down (based on cable detection)
-    uint8_t seq_apd[] = { 0x10, 0x10 };
-    I2c_HW.write_multi(encoder.address, seq_apd, seq_apd + sizeof(seq_apd));
+    I2C_WRITE(encoder.address, 0x10, 0x10);
 
 #if !ENC_TEST_PATTERN
     // SD input mode
-    uint8_t seq_1_2[] = { 0x01, 0x00 };
-    I2c_HW.write_multi(encoder.address, seq_1_2, seq_1_2 + sizeof(seq_1_2));
+    I2C_WRITE(encoder.address, 0x01, 0x00);
 
     // NTSC, SSAF luma filter, 1.3MHz chroma filter
-    uint8_t seq_1_3[] = { 0x80, 0x10 };
-    I2c_HW.write_multi(encoder.address, seq_1_3, seq_1_3 + sizeof(seq_1_3));
+    I2C_WRITE(encoder.address, 0x80, 0x10);
 #endif
 
 #if 0
     // Pixel data valid, YPrPb, PrPb SSAF filter, AVE control, pedestal
-    uint8_t seq_1_4[] = { 0x82, 0xc9 };
-    I2c_HW.write_multi(encoder.address, seq_1_4, seq_1_4 + sizeof(seq_1_4));
+    I2C_WRITE(encoder.address, 0x82, 0xc9);
 #else
     // Pixel data valid, YPrPb, *no* PrPb SSAF filter, AVE control, pedestal
-    uint8_t seq_1_4[] = { 0x82, 0xc8 };
-    I2c_HW.write_multi(encoder.address, seq_1_4, seq_1_4 + sizeof(seq_1_4));
+    I2C_WRITE(encoder.address, 0x82, 0xc8);
 #endif
 
 #if 1
     // Enable VBI. Otherwise default.
-    uint8_t sdm3[] = { 0x83, 0x14 };
-    I2c_HW.write_multi(encoder.address, sdm3, sdm3 + sizeof(sdm3));
+    I2C_WRITE(encoder.address, 0x83, 0x14);
 #endif
 
     // Enable subcarrier frequency lock
-    uint8_t sdm4[] = { 0x84, 0x06 };
-    I2c_HW.write_multi(encoder.address, sdm4, sdm4 + sizeof(sdm4));
+    I2C_WRITE(encoder.address, 0x84, 0x06);
 
     // Autodetect SD input standard
-    uint8_t sdm6[] = { 0x87, 0x20 };
-    I2c_HW.write_multi(encoder.address, sdm6, sdm6 + sizeof(sdm6));
+    I2C_WRITE(encoder.address, 0x87, 0x20);
 
     // Enable SD progressive mode
-    uint8_t sdm7[] = { 0x88, 0x02 };
-    I2c_HW.write_multi(encoder.address, sdm7, sdm7 + sizeof(sdm7));
+    I2C_WRITE(encoder.address, 0x88, 0x02);
 
 #if ENC_TEST_PATTERN
     // Color bar test pattern
-    uint8_t pleasework1[] = { 0x84, 0x40 };
-    I2c_HW.write_multi(encoder.address, pleasework1, pleasework1 + 2);
+    I2C_WRITE(encoder.address, 0x84, 0x40);
 #endif
 }
 
@@ -205,16 +188,16 @@ static inline void setup_ad_black_magic()
     // 42 82 68 ; ADI Required Write
     decoder.select_submap(DEC_SUBMAP_0x80);
     uint8_t dec_req1[] = { 0x9c, 0x00 };
-    I2c_HW.write_multi(decoder.address, dec_req1, dec_req1 + 2);
+    I2c_HW.write(decoder.address, dec_req1, dec_req1 + 2);
     uint8_t dec_req2[] = { 0x9c, 0xff };
-    I2c_HW.write_multi(decoder.address, dec_req2, dec_req2 + 2);
+    I2c_HW.write(decoder.address, dec_req2, dec_req2 + 2);
     decoder.select_submap(DEC_SUBMAP_USER);
     uint8_t dec_req3[] = { 0x80, 0x51 };
-    I2c_HW.write_multi(decoder.address, dec_req3, dec_req3 + 2);
+    I2c_HW.write(decoder.address, dec_req3, dec_req3 + 2);
     uint8_t dec_req4[] = { 0x81, 0x51 };
-    I2c_HW.write_multi(decoder.address, dec_req4, dec_req4 + 2);
+    I2c_HW.write(decoder.address, dec_req4, dec_req4 + 2);
     uint8_t dec_req5[] = { 0x82, 0x68 };
-    I2c_HW.write_multi(decoder.address, dec_req5, dec_req5 + 2);
+    I2c_HW.write(decoder.address, dec_req5, dec_req5 + 2);
 }
 
 enum ConvInputSelection : uint8_t {
@@ -227,30 +210,30 @@ static void set_smoothing(ConvInputSelection input, bool smoothing)
     if (smoothing) {
         // Shaping filter control 1, SVHS 3 luma & chroma LPF
         uint8_t shafc1[] = { 0x17, 0x44 };
-        I2c_HW.write_multi(decoder.address, shafc1, shafc1 + 2);
+        I2c_HW.write(decoder.address, shafc1, shafc1 + 2);
     }
     else if (input == INPUT_CVBS) {
         // Shaping filter control 1, AD recommendation for CVBS
         uint8_t shafc1[] = { 0x17, 0x41 };
-        I2c_HW.write_multi(decoder.address, shafc1, shafc1 + 2);
+        I2c_HW.write(decoder.address, shafc1, shafc1 + 2);
     }
     else /* if (input == INPUT_SVIDEO) */ {
         // Shaping filter control 1, set to default
         uint8_t shafc1[] = { 0x17, 0x01 };
-        I2c_HW.write_multi(decoder.address, shafc1, shafc1 + 2);
+        I2c_HW.write(decoder.address, shafc1, shafc1 + 2);
     }
 
     if (smoothing) {
         // Shaping filter control 2
         // SVHS 3 luma LPF
         uint8_t shafc2[] = { 0x18, 0x84 };
-        I2c_HW.write_multi(decoder.address, shafc2, shafc2 + 2);
+        I2c_HW.write(decoder.address, shafc2, shafc2 + 2);
     }
     else {
         // Shaping filter control 2
         // Select best filter automagically
         uint8_t shafc2[] = { 0x18, 0x13 };
-        I2c_HW.write_multi(decoder.address, shafc2, shafc2 + 2);
+        I2c_HW.write(decoder.address, shafc2, shafc2 + 2);
     }
 
     // Antialiasing Filter Control 1
@@ -262,7 +245,7 @@ static void setup_video(ConvInputSelection input, bool pedestal, bool smoothing)
     // Software reset decoder and encoder
     decoder.set_power_management(false, true);
     uint8_t enc_reset_seq[] = { 0x17, 0x02 };
-    I2c_HW.write_multi(encoder.address, enc_reset_seq, enc_reset_seq + sizeof(enc_reset_seq));
+    I2c_HW.write(encoder.address, enc_reset_seq, enc_reset_seq + sizeof(enc_reset_seq));
 
     // Decoder setup
 
@@ -273,11 +256,11 @@ static void setup_video(ConvInputSelection input, bool pedestal, bool smoothing)
     // AFE IBIAS (undocumented register, used in recommended scripts)
     if (input == INPUT_CVBS) {
         uint8_t dec_afe_ibias[] = { 0x52, 0xcd };
-        I2c_HW.write_multi(decoder.address, dec_afe_ibias, dec_afe_ibias + 2);
+        I2c_HW.write(decoder.address, dec_afe_ibias, dec_afe_ibias + 2);
     }
     else {
         uint8_t dec_afe_ibias[] = { 0x53, 0xce };
-        I2c_HW.write_multi(decoder.address, dec_afe_ibias, dec_afe_ibias + 2);
+        I2c_HW.write(decoder.address, dec_afe_ibias, dec_afe_ibias + 2);
     }
 
     // Select input
@@ -317,18 +300,18 @@ static void setup_video(ConvInputSelection input, bool pedestal, bool smoothing)
     // A write to a supposedly read-only register, recommended by AD scripts.
     {
         uint8_t dec_req1[] = { 0x13, 0x00 };
-        I2c_HW.write_multi(decoder.address, dec_req1, dec_req1 + 2);
+        I2c_HW.write(decoder.address, dec_req1, dec_req1 + 2);
     }
 
     // Analog clamp control
     // 100% color bars
     uint8_t ana_clampc[] = { 0x14, 0x11 };
-    I2c_HW.write_multi(decoder.address, ana_clampc, ana_clampc + 2);
+    I2c_HW.write(decoder.address, ana_clampc, ana_clampc + 2);
 
     // Digital clamp control
     // Digital clamp on, time constant adaptive
     uint8_t dig_clampc[] = { 0x15, 0x60 };
-    I2c_HW.write_multi(decoder.address, dig_clampc, dig_clampc + 2);
+    I2c_HW.write(decoder.address, dig_clampc, dig_clampc + 2);
 
     // Optional smoothing
     set_smoothing(input, smoothing);
@@ -337,18 +320,18 @@ static void setup_video(ConvInputSelection input, bool pedestal, bool smoothing)
     // Comb filter control
     // PAL: wide bandwidth, NTSC: medium-low bandwidth (01)
     uint8_t combfc[] = { 0x19, 0xf6 };
-    I2c_HW.write_multi(decoder.address, combfc, combfc + 2);
+    I2c_HW.write(decoder.address, combfc, combfc + 2);
 #endif
 
     // Analog Devices control 2
     // LLC pin active
     uint8_t adc2[] = { 0x1d, 0x40 };
-    I2c_HW.write_multi(decoder.address, adc2, adc2 + 2);
+    I2c_HW.write(decoder.address, adc2, adc2 + 2);
 
     // VS/FIELD Control 1
     // EAV/SAV codes generated for Analog Devices encoder
     uint8_t vs_fieldc[] = { 0x31, 0x02 };
-    I2c_HW.write_multi(decoder.address, vs_fieldc, vs_fieldc + sizeof(vs_fieldc));
+    I2c_HW.write(decoder.address, vs_fieldc, vs_fieldc + sizeof(vs_fieldc));
 
     // CTI DNR control
     // Disable CTI and CTI alpha blender, enable DNR
@@ -357,18 +340,31 @@ static void setup_video(ConvInputSelection input, bool pedestal, bool smoothing)
     // Output sync select 2
     // Output SFL on the VS/FIELD/SFL pin
     uint8_t out_sync_sel2[] = { 0x6b, 0x14 };
-    I2c_HW.write_multi(decoder.address, out_sync_sel2, out_sync_sel2 + 2);
+    I2c_HW.write(decoder.address, out_sync_sel2, out_sync_sel2 + 2);
 
 #if 0
     // Drive strength of digital outputs
     // Low drive strength for all
     uint8_t dr_str[] = { 0xf4, 0x00 };
-    I2c_HW.write_multi(decoder.address, dr_str, dr_str + 2);
+    I2c_HW.write(decoder.address, dr_str, dr_str + 2);
 #endif
 
     // Encoder setup
     setup_encoder();
 }
+
+#if DEBUG > 1
+static void i2c_trace(uint8_t addr, const uint8_t *begin, const uint8_t *end, bool start, bool stop)
+{
+    serial << _T("I2C write (start == ") << asdec(start) << _T(", stop == ")
+           << asdec(stop) << _T(") to addr 0x") << ashex(addr) << _T(": { ");
+    while (begin < end) {
+        serial << _T("0x") << ashex(*begin) << _T(", ");
+        ++begin;
+    }
+    serial << _T(" }\r\n");
+}
+#endif
 
 int main(void)
 {
@@ -392,7 +388,10 @@ int main(void)
     sda.mode = INPUT;
     scl.mode = INPUT;
 
-    I2c_HW.setup();
+    I2C_INIT();
+#if DEBUG > 1
+    I2c_HW.set_trace(i2c_trace);
+#endif
 
 #if DEBUG || CALIBRATE
     serial.setup(9600, DATA_EIGHT, STOP_ONE, PARITY_DISABLED);
@@ -489,23 +488,18 @@ int main(void)
             if (got_interrupt) {
                 serial << _T("Interrupt\r\n");
                 decoder.select_submap(DEC_SUBMAP_INTR_VDP);
-                I2c_HW.write(decoder.address, 0x42, true, false);
-                uint8_t intrs1 = I2c_HW.read(decoder.address);
-                I2c_HW.write(decoder.address, 0x4a, true, false);
-                uint8_t intrs3 = I2c_HW.read(decoder.address);
+                uint8_t intrs1 = I2C_READ_ONE(decoder.address, 0x42);
+                uint8_t intrs3 = I2C_READ_ONE(decoder.address, 0x4a);
                 decoder.select_submap(DEC_SUBMAP_USER);
                 serial << _T("Interrupt status 1: 0x") << ashex(intrs1) << _T("\r\n");
                 serial << _T("Interrupt status 3: 0x") << ashex(intrs3) << _T("\r\n");
             }
 
-            I2c_HW.write(decoder.address, 0x10, true, false);
-            uint8_t new_status1 = I2c_HW.read(decoder.address);
-            I2c_HW.write(decoder.address, 0x12, true, false);
-            uint8_t new_status2 = I2c_HW.read(decoder.address);
+            uint8_t new_status1 = I2C_READ_ONE(decoder.address, 0x10);
+            uint8_t new_status2 = I2C_READ_ONE(decoder.address, 0x12);
 #endif
 
-            I2c_HW.write(decoder.address, 0x13, true, false);
-            uint8_t new_status3 = I2c_HW.read(decoder.address);
+            uint8_t new_status3 = I2C_READ_ONE(decoder.address, 0x13);
 
 #if DEBUG
             if (new_status1 != dec_status1) {
@@ -546,7 +540,7 @@ int main(void)
 #if 1
                 uint8_t fsc[4] = { 0, 0, 0, 0 };
                 for (uint8_t i = 0; i < 4; ++i)
-                    I2C_READ_ONE(fsc[i], encoder.address, 0x8c + i);
+                    fsc[i] = I2C_READ_ONE(encoder.address, 0x8c + i);
 
                 uint32_t fsc32 = (uint32_t)fsc[3] << 24ul;
                 fsc32 |= (uint32_t)fsc[2] << 16ul;
