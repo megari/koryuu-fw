@@ -4,10 +4,13 @@
 #include <yaal/io/ports.hh>
 #include <yaal/communication/i2c_hw.hh>
 
+#include "i2c_helpers.hh"
+
 #define AVGLPF 0
 
 namespace ad_decoder {
     using namespace yaal;
+    using namespace i2c_helpers;
 
     enum InputSelection : uint8_t {
         INSEL_CVBS_Ain1      = 0x00,
@@ -113,52 +116,51 @@ namespace ad_decoder {
         }
 
         void select_input(InputSelection input) {
-            uint8_t insel[] = { 0x00, input };
-            I2c_HW.write(address, insel, insel + sizeof(insel));
+            I2C_WRITE(address, 0x00, (uint8_t)input);
         }
 
         void select_autodetection(AutoDetectSelection ad) {
-            uint8_t autodetect[] = { 0x02, ad };
-            I2c_HW.write(address, autodetect, autodetect + sizeof(autodetect));
+            I2C_WRITE(address, 0x02, (uint8_t)ad);
         }
 
         void select_submap(DecoderSubmap sm) {
-            uint8_t submap[] = { 0x0e, sm };
-            I2c_HW.write(address, submap, submap + sizeof(submap));
+            I2C_WRITE(address, 0x0e, (uint8_t)sm);
         }
 
         void set_output_control(bool tristate_outputs, bool enable_vbi) {
-            uint8_t outc[] = { 0x03, 0x0c };
+            uint8_t outc = 0x0c;
             if (tristate_outputs)
-                outc[1] |= OUTC_TOD;
+                outc |= OUTC_TOD;
             if (enable_vbi)
-                outc[1] |= OUTC_VBI_EN;
-            I2c_HW.write(address, outc, outc + sizeof(outc));
+                outc |= OUTC_VBI_EN;
+            I2C_WRITE(address, 0x03, outc);
         }
 
         void set_ext_output_control(bool full_range, bool enable_sfl,
                 bool blank_chroma_vbi, bool enable_timing_out, bool bt656_4) {
-            uint8_t ext_outc[] = { 0x04, 0x30 };
+            uint8_t ext_outc = 0x30;
             if (full_range)
-                ext_outc[1] |= EOUTC_RANGE_FULL;
+                ext_outc |= EOUTC_RANGE_FULL;
             if (enable_sfl)
-                ext_outc[1] |= EOUTC_SFL_EN;
+                ext_outc |= EOUTC_SFL_EN;
             if (blank_chroma_vbi)
-                ext_outc[1] |= EOUTC_BLANK_C_VBI;
+                ext_outc |= EOUTC_BLANK_C_VBI;
             if (enable_timing_out)
-                ext_outc[1] |= EOUTC_TIM_OE;
+                ext_outc |= EOUTC_TIM_OE;
             if (bt656_4)
-                ext_outc[1] |= EOUTC_BT656_4;
-            I2c_HW.write(address, ext_outc, ext_outc + sizeof(ext_outc));
+                ext_outc |= EOUTC_BT656_4;
+            I2C_WRITE(address, 0x04, ext_outc);
         }
 
         void set_power_management(bool powerdown, bool reset) {
-            uint8_t pwr_mgmt[] = { 0x0f, 0x00 };
+            uint8_t pwr_mgmt = 0x00;
             if (powerdown)
-                pwr_mgmt[1] |= PWRM_PWRDWN;
+                pwr_mgmt |= PWRM_PWRDWN;
             if (reset)
-                pwr_mgmt[1] |= PWRM_RESET;
-            I2c_HW.write(address, pwr_mgmt, pwr_mgmt + sizeof(pwr_mgmt));
+                pwr_mgmt |= PWRM_RESET;
+
+            // An I2C failure is expected here, as the chip resets.
+            I2C_WRITE<false>(address, 0x0f, pwr_mgmt);
         }
 
         void set_cti_dnr_control(bool enable_cti, bool enable_cti_ab, AlphaBlend ab, bool enable_dnr) {
