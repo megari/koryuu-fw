@@ -187,17 +187,12 @@ static inline void setup_ad_black_magic()
     // 42 81 51 ; ADI Required Write
     // 42 82 68 ; ADI Required Write
     decoder.select_submap(DEC_SUBMAP_0x80);
-    uint8_t dec_req1[] = { 0x9c, 0x00 };
-    I2c_HW.write(decoder.address, dec_req1, dec_req1 + 2);
-    uint8_t dec_req2[] = { 0x9c, 0xff };
-    I2c_HW.write(decoder.address, dec_req2, dec_req2 + 2);
+    I2C_WRITE(decoder.address, 0x9c, 0x00);
+    I2C_WRITE(decoder.address, 0x9c, 0xff);
     decoder.select_submap(DEC_SUBMAP_USER);
-    uint8_t dec_req3[] = { 0x80, 0x51 };
-    I2c_HW.write(decoder.address, dec_req3, dec_req3 + 2);
-    uint8_t dec_req4[] = { 0x81, 0x51 };
-    I2c_HW.write(decoder.address, dec_req4, dec_req4 + 2);
-    uint8_t dec_req5[] = { 0x82, 0x68 };
-    I2c_HW.write(decoder.address, dec_req5, dec_req5 + 2);
+    I2C_WRITE(decoder.address, 0x80, 0x51);
+    I2C_WRITE(decoder.address, 0x81, 0x51);
+    I2C_WRITE(decoder.address, 0x82, 0x68);
 }
 
 enum ConvInputSelection : uint8_t {
@@ -209,31 +204,26 @@ static void set_smoothing(ConvInputSelection input, bool smoothing)
 {
     if (smoothing) {
         // Shaping filter control 1, SVHS 3 luma & chroma LPF
-        uint8_t shafc1[] = { 0x17, 0x44 };
-        I2c_HW.write(decoder.address, shafc1, shafc1 + 2);
+        I2C_WRITE(decoder.address, 0x17, 0x44);
     }
     else if (input == INPUT_CVBS) {
         // Shaping filter control 1, AD recommendation for CVBS
-        uint8_t shafc1[] = { 0x17, 0x41 };
-        I2c_HW.write(decoder.address, shafc1, shafc1 + 2);
+        I2C_WRITE(decoder.address, 0x17, 0x41);
     }
     else /* if (input == INPUT_SVIDEO) */ {
         // Shaping filter control 1, set to default
-        uint8_t shafc1[] = { 0x17, 0x01 };
-        I2c_HW.write(decoder.address, shafc1, shafc1 + 2);
+        I2C_WRITE(decoder.address, 0x17, 0x01);
     }
 
     if (smoothing) {
         // Shaping filter control 2
         // SVHS 3 luma LPF
-        uint8_t shafc2[] = { 0x18, 0x84 };
-        I2c_HW.write(decoder.address, shafc2, shafc2 + 2);
+        I2C_WRITE(decoder.address, 0x18, 0x84);
     }
     else {
         // Shaping filter control 2
         // Select best filter automagically
-        uint8_t shafc2[] = { 0x18, 0x13 };
-        I2c_HW.write(decoder.address, shafc2, shafc2 + 2);
+        I2C_WRITE(decoder.address, 0x18, 0x13);
     }
 
     // Antialiasing Filter Control 1
@@ -244,8 +234,7 @@ static void setup_video(ConvInputSelection input, bool pedestal, bool smoothing)
 {
     // Software reset decoder and encoder
     decoder.set_power_management(false, true);
-    uint8_t enc_reset_seq[] = { 0x17, 0x02 };
-    I2c_HW.write(encoder.address, enc_reset_seq, enc_reset_seq + sizeof(enc_reset_seq));
+    I2C_WRITE(encoder.address, 0x17, 0x02);
 
     // Decoder setup
 
@@ -255,12 +244,10 @@ static void setup_video(ConvInputSelection input, bool pedestal, bool smoothing)
 
     // AFE IBIAS (undocumented register, used in recommended scripts)
     if (input == INPUT_CVBS) {
-        uint8_t dec_afe_ibias[] = { 0x52, 0xcd };
-        I2c_HW.write(decoder.address, dec_afe_ibias, dec_afe_ibias + 2);
+        I2C_WRITE(decoder.address, 0x52, 0xcd);
     }
     else {
-        uint8_t dec_afe_ibias[] = { 0x53, 0xce };
-        I2c_HW.write(decoder.address, dec_afe_ibias, dec_afe_ibias + 2);
+        I2C_WRITE(decoder.address, 0x53, 0xce);
     }
 
     // Select input
@@ -299,19 +286,16 @@ static void setup_video(ConvInputSelection input, bool pedestal, bool smoothing)
 
     // A write to a supposedly read-only register, recommended by AD scripts.
     {
-        uint8_t dec_req1[] = { 0x13, 0x00 };
-        I2c_HW.write(decoder.address, dec_req1, dec_req1 + 2);
+        I2C_WRITE(decoder.address, 0x13, 0x00);
     }
 
     // Analog clamp control
     // 100% color bars
-    uint8_t ana_clampc[] = { 0x14, 0x11 };
-    I2c_HW.write(decoder.address, ana_clampc, ana_clampc + 2);
+    I2C_WRITE(decoder.address, 0x14, 0x11);
 
     // Digital clamp control
     // Digital clamp on, time constant adaptive
-    uint8_t dig_clampc[] = { 0x15, 0x60 };
-    I2c_HW.write(decoder.address, dig_clampc, dig_clampc + 2);
+    I2C_WRITE(decoder.address, 0x15, 0x60);
 
     // Optional smoothing
     set_smoothing(input, smoothing);
@@ -319,19 +303,16 @@ static void setup_video(ConvInputSelection input, bool pedestal, bool smoothing)
 #if 0
     // Comb filter control
     // PAL: wide bandwidth, NTSC: medium-low bandwidth (01)
-    uint8_t combfc[] = { 0x19, 0xf6 };
-    I2c_HW.write(decoder.address, combfc, combfc + 2);
+    I2C_WRITE(decoder.address, 0x19, 0xf6);
 #endif
 
     // Analog Devices control 2
     // LLC pin active
-    uint8_t adc2[] = { 0x1d, 0x40 };
-    I2c_HW.write(decoder.address, adc2, adc2 + 2);
+    I2C_WRITE(decoder.address, 0x1d, 0x40);
 
     // VS/FIELD Control 1
     // EAV/SAV codes generated for Analog Devices encoder
-    uint8_t vs_fieldc[] = { 0x31, 0x02 };
-    I2c_HW.write(decoder.address, vs_fieldc, vs_fieldc + sizeof(vs_fieldc));
+    I2C_WRITE(decoder.address, 0x31, 0x02);
 
     // CTI DNR control
     // Disable CTI and CTI alpha blender, enable DNR
@@ -339,14 +320,12 @@ static void setup_video(ConvInputSelection input, bool pedestal, bool smoothing)
 
     // Output sync select 2
     // Output SFL on the VS/FIELD/SFL pin
-    uint8_t out_sync_sel2[] = { 0x6b, 0x14 };
-    I2c_HW.write(decoder.address, out_sync_sel2, out_sync_sel2 + 2);
+    I2C_WRITE(decoder.address, 0x6b, 0x14);
 
 #if 0
     // Drive strength of digital outputs
     // Low drive strength for all
-    uint8_t dr_str[] = { 0xf4, 0x00 };
-    I2c_HW.write(decoder.address, dr_str, dr_str + 2);
+    I2C_WRITE(decoder.address, 0xf4, 0x00);
 #endif
 
     // Encoder setup
