@@ -6,6 +6,7 @@
 
 #include "adv7280.hh"
 #include "adv7391.hh"
+#include "i2c_helpers.hh"
 
 #define DEBUG 1
 #define CALIBRATE 0
@@ -14,6 +15,7 @@
 using namespace yaal;
 using namespace ad_decoder;
 using namespace ad_encoder;
+using namespace i2c_helpers;
 
 ADV7280A<PortD2, PortD6, PortC2> decoder(0x20);
 ADV7391<PortD7> encoder(0x2a);
@@ -28,7 +30,6 @@ PortB6 led_OPT;
 #if DEBUG
 Serial0 serial;
 #endif
-#include "i2c_helpers.hh"
 
 enum {
     CVBS,
@@ -36,6 +37,17 @@ enum {
     SVIDEO,
     SVIDEO_PEDESTAL,
 } curr_input;
+
+__attribute__((noreturn))
+void i2c_err_func(uint8_t addr, uint8_t arg_count)
+{
+#if DEBUG
+        serial << _T("I2C write of size ") << asdec(arg_count)
+               << _T(" to addr 0x") << ashex(addr) << _T(" FAILED!\r\n");
+#endif
+        // TODO: should we enable all the blinkenlights here?
+        while (true);
+}
 
 bool smoothing_enabled = false;
 
@@ -368,6 +380,8 @@ int main(void)
     scl.mode = INPUT;
 
     I2C_INIT();
+    I2C_set_err_func(i2c_err_func);
+
 #if DEBUG > 1
     I2c_HW.set_trace(i2c_trace);
 #endif
