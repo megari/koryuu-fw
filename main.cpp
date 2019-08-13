@@ -11,6 +11,12 @@
 #define DEBUG 1
 #define CALIBRATE 0
 #define ENC_TEST_PATTERN 0
+#define AUTORESET 1
+#define ERROR_PANIC 1
+
+#if AUTORESET
+#include <avr/wdt.h>
+#endif
 
 using namespace yaal;
 using namespace ad_decoder;
@@ -38,16 +44,36 @@ enum {
     SVIDEO_PEDESTAL,
 } curr_input;
 
+#if ERROR_PANIC
 __attribute__((noreturn))
-void i2c_err_func(uint8_t addr, uint8_t arg_count)
+static void i2c_err_func(uint8_t addr, uint8_t arg_count)
 {
 #if DEBUG
         serial << _T("I2C write of size ") << asdec(arg_count)
                << _T(" to addr 0x") << ashex(addr) << _T(" FAILED!\r\n");
+#else
+        (void)addr;
+        (void)arg_count;
 #endif
-        // TODO: should we enable all the blinkenlights here?
-        while (true);
+
+#if AUTORESET
+        wdt_enable(WDTO_4S);
+#endif
+
+        led_CVBS = true;
+        led_YC = true;
+        led_OPT = true;
+        decoder.reset = false;
+        decoder.pwrdwn = false;
+        encoder.reset = false;
+        while (true) {
+            _delay_ms(500);
+            led_CVBS = !led_CVBS;
+            led_YC = !led_YC;
+            led_OPT = !led_OPT;
+        }
 }
+#endif
 
 bool smoothing_enabled = false;
 
@@ -359,6 +385,16 @@ static void i2c_trace(uint8_t addr, const uint8_t *begin, const uint8_t *end, bo
 
 int main(void)
 {
+#if AUTORESET
+    // Must disable the watchdog timer ASAP.
+    cli();
+    wdt_reset();
+    MCUSR &= ~_BV(WDRF);
+    WDTCSR |= _BV(WDE) | _BV(WDCE);
+    WDTCSR = 0x00;
+    sei();
+#endif
+
     _delay_ms(100);
     cli();
 
@@ -380,7 +416,10 @@ int main(void)
     scl.mode = INPUT;
 
     I2C_INIT();
+
+#if ERROR_PANIC
     I2C_set_err_func(i2c_err_func);
+#endif
 
 #if DEBUG > 1
     I2c_HW.set_trace(i2c_trace);
