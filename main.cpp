@@ -9,7 +9,7 @@
 #include "i2c_helpers.hh"
 
 #ifndef DEBUG
-    #define DEBUG 1
+    #define DEBUG 0
 #endif
 #ifndef CALIBRATE
     #define CALIBRATE 0
