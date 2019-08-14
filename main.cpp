@@ -272,7 +272,7 @@ static void setup_video(ConvInputSelection input, bool pedestal, bool smoothing)
 {
     // Software reset decoder and encoder
     decoder.set_power_management(false, true);
-    I2C_WRITE(encoder.address, 0x17, 0x02);
+    I2C_WRITE<false>(encoder.address, 0x17, 0x02);
 
     // Decoder setup
 
