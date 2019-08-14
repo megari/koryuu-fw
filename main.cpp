@@ -8,11 +8,21 @@
 #include "adv7391.hh"
 #include "i2c_helpers.hh"
 
-#define DEBUG 1
-#define CALIBRATE 0
-#define ENC_TEST_PATTERN 0
-#define AUTORESET 1
-#define ERROR_PANIC 1
+#ifndef DEBUG
+    #define DEBUG 1
+#endif
+#ifndef CALIBRATE
+    #define CALIBRATE 0
+#endif
+#ifndef ENC_TEST_PATTERN
+    #define ENC_TEST_PATTERN 0
+#endif
+#ifndef AUTORESET
+    #define AUTORESET 1
+#endif
+#ifndef ERROR_PANIC
+    #define ERROR_PANIC 1
+#endif
 
 #if AUTORESET
 #include <avr/wdt.h>
