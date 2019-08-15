@@ -27,6 +27,12 @@
     #define ERROR_PANIC 1
 #endif
 
+// There is no sense in enabling autoreset if panic is disabled
+#if ERROR_PANIC == 0
+    #undef AUTORESET
+    #define AUTORESET 0
+#endif
+
 #if AUTORESET
 #include <avr/wdt.h>
 #endif
