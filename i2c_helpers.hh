@@ -7,7 +7,6 @@
 #include <yaal/communication/i2c_hw.hh>
 namespace i2c_helpers {
     using i2c_err_f_t = void (*)(uint8_t addr, uint8_t arg_count);
-    void I2C_set_err_func(i2c_err_f_t f);
 
     template<typename ...Ts>
     inline void I2C_INIT(Ts... args)
