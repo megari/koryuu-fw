@@ -35,16 +35,18 @@ YAAL := vendor/yaal
 include ./vendor/yaamake/makefile.ext
 
 # Additions by megari
+build_hex: clean build hex
+
 build_debug: DEFS = -DDEBUG=1
-build_debug: clean build
+build_debug: build_hex
 
 build_debug2: DEFS = -DDEBUG=2
-build_debug2: clean build
+build_debug2: build_hex
 
 build_no_autoreset: DEFS = -DAUTORESET=0
-build_no_autoreset: clean build
+build_no_autoreset: build_hex
 
 build_no_panic: DEFS = -DERROR_PANIC=0
-build_no_panic: clean build
+build_no_panic: build_hex
 
 # run 'make help' for information
