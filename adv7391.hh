@@ -1,6 +1,8 @@
 #ifndef ADV7391_HH
 #define ADV7391_HH
+#include <yaal/requirements.hh>
 
+#ifdef __YAAL__
 #include <yaal/io/ports.hh>
 #include <yaal/communication/i2c_hw.hh>
 
@@ -21,4 +23,5 @@ namespace ad_encoder {
 	};
 }
 
+#endif
 #endif

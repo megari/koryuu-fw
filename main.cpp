@@ -1,3 +1,6 @@
+#include <yaal/requirements.hh>
+
+#ifdef __YAAL__
 #include <yaal/io/ports.hh>
 #include <yaal/io/serial.hh>
 #include <yaal/communication/i2c_hw.hh>
@@ -645,3 +648,5 @@ int main(void)
 
     return 0;
 }
+
+#endif
