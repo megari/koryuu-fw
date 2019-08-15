@@ -5,6 +5,21 @@
 
 #ifdef __YAAL__
 #include <yaal/communication/i2c_hw.hh>
+
+#ifndef __cpp_if_constexpr
+    #if __cplusplus >= 201703L
+        #define __cpp_if_constexpr 201606
+    #else
+        #define __cpp_if_constexpr 0
+    #endif
+#endif
+
+#if __cpp_if_constexpr >= 201606
+    #define IF_CONSTEXPR if constexpr
+#else
+    #define IF_CONSTEXPR if
+#endif
+
 namespace i2c_helpers {
     using i2c_err_f_t = void (*)(uint8_t addr, uint8_t arg_count);
 
@@ -31,7 +46,7 @@ namespace i2c_helpers {
         using yaal::I2c_HW;
         using internal::err_func;
         bool err = I2c_HW.write(addr, args...);
-        if (fail_fatal && err && err_func)
+        IF_CONSTEXPR (fail_fatal && err && err_func)
             err_func(addr, sizeof...(args));
     }
 
