@@ -4,7 +4,6 @@
 
 #ifdef __YAAL__
 #include <yaal/io/ports.hh>
-#include <yaal/communication/i2c_hw.hh>
 
 #include "i2c_helpers.hh"
 
@@ -167,15 +166,15 @@ namespace ad_decoder {
 
         void set_cti_dnr_control(bool enable_cti, bool enable_cti_ab, AlphaBlend ab, bool enable_dnr) {
             // CTI DNR control
-            uint8_t cti_dnr[] = { 0x4d, 0xc0 };
+            uint8_t cti_dnr = 0xc0;
             if (enable_cti)
-                cti_dnr[1] |= CTIDNRC_CTI_EN;
+                cti_dnr |= CTIDNRC_CTI_EN;
             if (enable_cti_ab)
-                cti_dnr[1] |= CTIDNRC_CTI_AB_EN;
-            cti_dnr[1] |= ab;
+                cti_dnr |= CTIDNRC_CTI_AB_EN;
+            cti_dnr |= ab;
             if (enable_dnr)
-                cti_dnr[1] |= CTIDNRC_DNR_EN;
-            I2c_HW.write(address, cti_dnr, cti_dnr + sizeof(cti_dnr));
+                cti_dnr |= CTIDNRC_DNR_EN;
+            I2C_WRITE(address, 0x4d, cti_dnr);
         }
 
         void deinterlace_reset() {
@@ -197,28 +196,28 @@ namespace ad_decoder {
 
 #if AVGLPF
         void set_lpf(bool enable_lpf, uint8_t cutoff) {
-            uint8_t lpf[] = { 0xe6, 0x00 };
+            uint8_t lpf = 0x00;
             if (enable_lpf)
-                lpf[1] |= 0x02;
-            lpf[1] |= (cutoff & 0x07) << 2;
+                lpf |= 0x02;
+            lpf |= (cutoff & 0x07) << 2;
             select_submap(DEC_SUBMAP_USER2);
-            I2c_HW.write(address, lpf, lpf + sizeof(lpf));
+            I2C_WRITE(address, 0xe6, lpf);
             select_submap(DEC_SUBMAP_USER);
         }
 #endif
         void set_aa_filters(bool man_ovr, bool f1, bool f2, bool f3, bool f4) {
-            uint8_t afec[] = { 0xf3, 0x00 };
+            uint8_t afec = 0x00;
             if (man_ovr)
-                afec[1] |= AFEC_MAN_OVR;
+                afec |= AFEC_MAN_OVR;
             if (f1)
-                afec[1] |= AFEC_F1_EN;
+                afec |= AFEC_F1_EN;
             if (f2)
-                afec[1] |= AFEC_F2_EN;
+                afec |= AFEC_F2_EN;
             if (f3)
-                afec[1] |= AFEC_F3_EN;
+                afec |= AFEC_F3_EN;
             if (f4)
-                afec[1] |= AFEC_F4_EN;
-            I2c_HW.write(address, afec, afec + sizeof(afec));
+                afec |= AFEC_F4_EN;
+            I2C_WRITE(address, 0xf3, afec);
         }
 
         void set_interrupt_config(InterruptDriveLevel idl, bool manual_mode,
@@ -228,11 +227,11 @@ namespace ad_decoder {
             if (setup_submap)
                 select_submap(DEC_SUBMAP_INTR_VDP);
 
-            uint8_t intrcfg[] = { 0x40, 0x00 };
-            intrcfg[1] |= idl | duration | mvirq_sel;
+            uint8_t intrcfg = 0x00;
+            intrcfg |= idl | duration | mvirq_sel;
             if (manual_mode)
-                intrcfg[1] |= 0x04;
-            I2c_HW.write(address, intrcfg, intrcfg + sizeof(intrcfg));
+                intrcfg |= 0x04;
+            I2C_WRITE(address, 0x40, intrcfg);
 
             if (setup_submap)
                 select_submap(DEC_SUBMAP_USER);
@@ -245,16 +244,16 @@ namespace ad_decoder {
             if (setup_submap)
                 select_submap(DEC_SUBMAP_INTR_VDP);
 
-            uint8_t iclr1[] = { 0x43, 0x00 };
+            uint8_t iclr1 = 0x00;
             if (clear_sd_lock)
-                iclr1[1] |= 0x01;
+                iclr1 |= 0x01;
             if (clear_sd_unlock)
-                iclr1[1] |= 0x02;
+                iclr1 |= 0x02;
             if (clear_freerun_change)
-                iclr1[1] |= 0x20;
+                iclr1 |= 0x20;
             if (clear_mv_ps_cs)
-                iclr1[1] |= 0x40;
-            I2c_HW.write(address, iclr1, iclr1 + sizeof(iclr1));
+                iclr1 |= 0x40;
+            I2C_WRITE(address, 0x43, iclr1);
 
             if (setup_submap)
                 select_submap(DEC_SUBMAP_USER);
@@ -267,16 +266,16 @@ namespace ad_decoder {
             if (setup_submap)
                 select_submap(DEC_SUBMAP_INTR_VDP);
 
-            uint8_t imsk1[] = { 0x44, 0x00 };
+            uint8_t imsk1 = 0x00;
             if (unmask_sd_lock)
-                imsk1[1] |= 0x01;
+                imsk1 |= 0x01;
             if (unmask_sd_unlock)
-                imsk1[1] |= 0x02;
+                imsk1 |= 0x02;
             if (unmask_freerun_change)
-                imsk1[1] |= 0x20;
+                imsk1 |= 0x20;
             if (unmask_mv_ps_cs)
-                imsk1[1] |= 0x40;
-            I2c_HW.write(address, imsk1, imsk1 + sizeof(imsk1));
+                imsk1 |= 0x40;
+            I2C_WRITE(address, 0x44, imsk1);
 
             if (setup_submap)
                 select_submap(DEC_SUBMAP_USER);
@@ -293,20 +292,20 @@ namespace ad_decoder {
             if (setup_submap)
                 select_submap(DEC_SUBMAP_INTR_VDP);
 
-            uint8_t iclr3[] = { 0x4b, 0x00 };
+            uint8_t iclr3 = 0x00;
             if (clear_sd_op_change)
-                iclr3[1] |= 0x01;
+                iclr3 |= 0x01;
             if (clear_sd_vsync_lock_change)
-                iclr3[1] |= 0x02;
+                iclr3 |= 0x02;
             if (clear_sd_hsync_lock_change)
-                iclr3[1] |= 0x04;
+                iclr3 |= 0x04;
             if (clear_sd_ad_result_change)
-                iclr3[1] |= 0x08;
+                iclr3 |= 0x08;
             if (clear_secam_lock_change)
-                iclr3[1] |= 0x10;
+                iclr3 |= 0x10;
             if (clear_pal_sw_lock_change)
-                iclr3[1] |= 0x20;
-            I2c_HW.write(address, iclr3, iclr3 + sizeof(iclr3));
+                iclr3 |= 0x20;
+            I2C_WRITE(address, 0x4b, iclr3);
 
             if (setup_submap)
                 select_submap(DEC_SUBMAP_USER);
@@ -323,20 +322,20 @@ namespace ad_decoder {
             if (setup_submap)
                 select_submap(DEC_SUBMAP_INTR_VDP);
 
-            uint8_t imsk3[] = { 0x4c, 0x00 };
+            uint8_t imsk3 = 0x00;
             if (unmask_sd_op_change)
-                imsk3[1] |= 0x01;
+                imsk3 |= 0x01;
             if (unmask_sd_vsync_lock_change)
-                imsk3[1] |= 0x02;
+                imsk3 |= 0x02;
             if (unmask_sd_hsync_lock_change)
-                imsk3[1] |= 0x04;
+                imsk3 |= 0x04;
             if (unmask_sd_ad_result_change)
-                imsk3[1] |= 0x08;
+                imsk3 |= 0x08;
             if (unmask_secam_lock_change)
-                imsk3[1] |= 0x10;
+                imsk3 |= 0x10;
             if (unmask_pal_sw_lock_change)
-                imsk3[1] |= 0x20;
-            I2c_HW.write(address, imsk3, imsk3 + sizeof(imsk3));
+                imsk3 |= 0x20;
+            I2C_WRITE(address, 0x4c, imsk3);
 
             if (setup_submap)
                 select_submap(DEC_SUBMAP_USER);
