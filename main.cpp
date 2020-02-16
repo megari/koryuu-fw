@@ -12,6 +12,8 @@
 #include "i2c_helpers.hh"
 #include "debounce.hh"
 
+#include <avr/eeprom.h>
+
 #ifndef DEBUG
     #define DEBUG 0
 #endif
@@ -56,6 +58,12 @@ PortB6 led_OPT;
 #if DEBUG
 Serial0 serial;
 #endif
+
+typedef struct {
+        uint8_t data[8];
+} ConvSettings;
+
+static EEMEM ConvSettings settings = { { 0, 0, 0, 0, 0, 0, 0, 0} };
 
 enum {
     CVBS,
@@ -404,6 +412,9 @@ int main(void)
 #if DEBUG || CALIBRATE
     serial.setup(9600, DATA_EIGHT, STOP_ONE, PARITY_DISABLED);
 #endif
+
+    ConvSettings eepdata;
+    eeprom_read_block(&eepdata, &settings, sizeof(settings));
 
     sei();
 
