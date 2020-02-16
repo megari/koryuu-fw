@@ -435,9 +435,9 @@ int main(void)
     serial << _T("converter starting...\r\n");
 #endif
 
-    setup_video(INPUT_CVBS, false, false);
-    curr_input = CVBS;
-    led_CVBS = true;
+    setup_video(INPUT_SVIDEO, true, false);
+    curr_input = SVIDEO_PEDESTAL;
+    led_YC = true;
 
     // Main loop.
     // Reads the switch status, decoder interrupt line and the status registers.
