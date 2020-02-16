@@ -10,6 +10,7 @@
 #include "adv7280.hh"
 #include "adv7391.hh"
 #include "i2c_helpers.hh"
+#include "debounce.hh"
 
 #ifndef DEBUG
     #define DEBUG 0
@@ -96,81 +97,14 @@ static void i2c_err_func(uint8_t addr, uint8_t arg_count)
 
 bool smoothing_enabled = false;
 
-PortD5 input_change;
-volatile bool input_change_down = false;
-
-static inline bool read_input_change()
-{
-    cli();
-    const bool ret = input_change_down;
-    input_change_down = false;
-    sei();
-    return ret;
-}
-
-static inline void input_change_debounce()
-{
-    static uint8_t counter = 0;
-    static bool state = false;
-
-    bool curr_state = !input_change;
-
-    if (curr_state != state) {
-        if (++counter == 4) {
-            state = curr_state;
-            if (state) {
-                // Will be reset to false when read
-                // in read_input_change().
-                input_change_down = true;
-            }
-            counter = 0;
-        }
-    }
-    else {
-        counter = 0;
-    }
-}
-
-PortB7 option;
-volatile bool option_down = false;
-
-static inline bool read_option()
-{
-    cli();
-    const bool ret = option_down;
-    option_down = false;
-    sei();
-    return ret;
-}
-
-static inline void option_debounce()
-{
-    static uint8_t counter = 0;
-    static bool state = false;
-
-    bool curr_state = !option;
-
-    if (curr_state != state) {
-        if (++counter == 4) {
-            state = curr_state;
-            if (state) {
-                // Will be reset to false when read
-                // in read_option().
-                option_down = true;
-            }
-            counter = 0;
-        }
-    }
-    else {
-        counter = 0;
-    }
-}
+koryuu::DebouncedButton<PortD5> input_change;
+koryuu::DebouncedButton<PortB7> option;
 
 // ISR to run debouncing every 10 ms
 ISR(TIMER0_COMPA_vect)
 {
-    input_change_debounce();
-    option_debounce();
+    input_change.debounce();
+    option.debounce();
 }
 
 static void setup_timer0()
@@ -441,8 +375,8 @@ int main(void)
     cli();
 
     // Setup reading the "input change" and "option" switches
-    input_change.mode = INPUT_PULLUP;
-    option.mode = INPUT_PULLUP;
+    input_change.set_mode(INPUT_PULLUP);
+    option.set_mode(INPUT_PULLUP);
     setup_timer0();
 
     // Setup LEDs
@@ -515,7 +449,7 @@ int main(void)
     bool got_interrupt = false;
     bool check_once_more = false;
     while (1) {
-        if (read_input_change()) {
+        if (input_change.read()) {
             switch (curr_input) {
             case CVBS:
                 decoder.select_autodetection(AD_PALBGHID_NTSCM_SECAM);
@@ -540,7 +474,7 @@ int main(void)
             }
         }
 
-        if (read_option()) {
+        if (option.read()) {
             smoothing_enabled = !smoothing_enabled;
             switch (curr_input) {
             case CVBS:
