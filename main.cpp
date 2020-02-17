@@ -118,15 +118,24 @@ static void setup_timer0()
     TIMSK0 = _BV(OCIE0A);
 }
 
-static void setup_encoder()
+static void setup_encoder(bool sleep = false, bool early_bail = false)
 {
+    if (sleep) {
+        // All DACs and PLL disabled, sleep mode on.
+        I2C_WRITE(encoder.address, 0x00, 0x01);
+    }
+    else {
 #if 0
-    // All DACs and PLL enabled
-    I2C_WRITE(encoder.address, 0x00, 0x1c);
+        // All DACs and PLL enabled
+        I2C_WRITE(encoder.address, 0x00, 0x1c);
 #else
-    // All DACs enabled, PLL disabled (only 2x oversampling)
-    I2C_WRITE(encoder.address, 0x00, 0x1e);
+        // All DACs enabled, PLL disabled (only 2x oversampling)
+        I2C_WRITE(encoder.address, 0x00, 0x1e);
 #endif
+    }
+
+    if (early_bail)
+        return;
 
     // Enable DAC autopower-down (based on cable detection)
     I2C_WRITE(encoder.address, 0x10, 0x10);
@@ -221,7 +230,8 @@ static void set_smoothing(ConvInputSelection input, bool smoothing)
     decoder.set_aa_filters(!smoothing, false, false, false, false);
 }
 
-static void setup_video(ConvInputSelection input, bool pedestal, bool smoothing)
+static void setup_video(ConvInputSelection input,
+        bool pedestal, bool smoothing, bool have_sync = true)
 {
     // Software reset decoder and encoder
     decoder.set_power_management(false, true);
@@ -343,7 +353,7 @@ static void setup_video(ConvInputSelection input, bool pedestal, bool smoothing)
 #endif
 
     // Encoder setup
-    setup_encoder();
+    setup_encoder(!have_sync);
 }
 
 #if DEBUG > 1
@@ -359,6 +369,7 @@ static void i2c_trace(uint8_t addr, const uint8_t *begin, const uint8_t *end, bo
 }
 #endif
 
+__attribute__((noreturn))
 int main(void)
 {
 #if AUTORESET
@@ -435,7 +446,7 @@ int main(void)
     serial << _T("converter starting...\r\n");
 #endif
 
-    setup_video(INPUT_SVIDEO, true, false);
+    setup_video(INPUT_SVIDEO, true, false, false);
     curr_input = SVIDEO_PEDESTAL;
     led_YC = true;
 
@@ -446,8 +457,9 @@ int main(void)
     uint8_t dec_status2 = 0x00;
 #endif
     uint8_t dec_status3 = 0x00;
+    bool has_lock = false;
     bool got_interrupt = false;
-    bool check_once_more = false;
+    bool check_once_more = true;
     while (1) {
         if (input_change.read()) {
             switch (curr_input) {
@@ -456,7 +468,8 @@ int main(void)
                 curr_input = CVBS_PEDESTAL;
                 break;
             case CVBS_PEDESTAL:
-                setup_video(INPUT_SVIDEO, false, false);
+                has_lock = false;
+                setup_video(INPUT_SVIDEO, false, false, false);
                 curr_input = SVIDEO;
                 led_CVBS = false;
                 led_YC = true;
@@ -466,7 +479,8 @@ int main(void)
                 curr_input = SVIDEO_PEDESTAL;
                 break;
             case SVIDEO_PEDESTAL:
-                setup_video(INPUT_CVBS, false, false);
+                has_lock = false;
+                setup_video(INPUT_CVBS, false, false, false);
                 curr_input = CVBS;
                 led_CVBS = true;
                 led_YC = false;
@@ -591,6 +605,14 @@ int main(void)
                 serial << _T("\r\n");
 #endif
             }
+            if (!has_lock && !!(new_status3 & 0x01)) {
+                    has_lock = true;
+                    setup_encoder(false, true);
+            }
+            else if (has_lock && !!!(new_status3 & 0x01)) {
+                    has_lock = false;
+                    setup_encoder(true, true);
+            }
             dec_status3 = new_status3;
 
             // Clear all interrupt flags...
@@ -607,9 +629,8 @@ int main(void)
         }
     }
 
+    __builtin_unreachable();
     I2c_HW.deinit();
-
-    return 0;
 }
 
 #endif
