@@ -342,6 +342,29 @@ static void setup_video(ConvInputSelection input, bool pedestal, bool smoothing)
     decoder.set_ext_output_control(true, true, true, false, false);
 
     // A write to a supposedly read-only register, recommended by AD scripts.
+    /*
+     * ADI docs say:
+     * XTAL_TTL_SEL (User Map, Register 0x13, Bit[2])
+     *
+     * When XTAL_TTL_SEL bit is set to 0 (default) the
+     * ADV728x will drive out 1.8 V on its XTALN and
+     * XTALP pins.
+     *
+     * When XTAL_TTL_SEL bit is set to 1 the ADV728x
+     * will not drive out a voltage on its XTALN and
+     * XTALP pins.
+     *
+     * The ADV728x documentation states that register
+     * 0x13 is a read only register (status register 3).
+     * Actually two registers share the register address
+     * 0x13.
+     *
+     * When you read from register 0x13, you read back the
+     * Status Register 3 data (this is read only). When
+     * you write to register 0x13 you write to an internal
+     * control register. The internal control register is
+     * write only and contains the XTAL_TTL_SEL bit.
+     */
     {
         I2C_WRITE(decoder.address, 0x13, 0x00);
     }
