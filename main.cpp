@@ -147,7 +147,7 @@ static void setup_encoder()
     I2C_WRITE(encoder.address, 0x82, 0xc8);
 #endif
 
-#if 1
+#if 0
     // Enable VBI. Otherwise default.
     // XXX: This will override the blanking bit in EAV/SAV!
     I2C_WRITE(encoder.address, 0x83, 0x14);
