@@ -156,6 +156,7 @@ static void setup_encoder()
 
 #if 1
     // Enable VBI. Otherwise default.
+    // XXX: This will override the blanking bit in EAV/SAV!
     I2C_WRITE(encoder.address, 0x83, 0x14);
 #endif
 
@@ -279,8 +280,8 @@ static void setup_video(ConvInputSelection input, bool pedestal, bool smoothing)
     decoder.set_output_control(false, true);
 
     // Extended output control
-    // Output full range, enable SFL, blank chroma during VBI
-    decoder.set_ext_output_control(true, true, true, false, false);
+    // Output full range, enable SFL, blank chroma during VBI, ITU BT.656-4
+    decoder.set_ext_output_control(true, true, true, false, true);
 
     // A write to a supposedly read-only register, recommended by AD scripts.
     /*
