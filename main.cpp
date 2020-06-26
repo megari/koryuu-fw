@@ -10,6 +10,7 @@
 #include "adv7280.hh"
 #include "adv7391.hh"
 #include "i2c_helpers.hh"
+#include "crc32.hh"
 #include "debounce.hh"
 
 #include <avr/eeprom.h>
@@ -59,18 +60,26 @@ PortB6 led_OPT;
 Serial0 serial;
 #endif
 
-typedef struct {
-        uint8_t data[8];
-} ConvSettings;
-
-static EEMEM ConvSettings settings = { { 0, 0, 0, 0, 0, 0, 0, 0} };
-
-enum {
+enum Input : uint8_t {
     CVBS,
     CVBS_PEDESTAL,
     SVIDEO,
     SVIDEO_PEDESTAL,
-} curr_input;
+};
+Input curr_input;
+
+static constexpr char SETTINGS_MAGIC[8] =
+        { 'K', 'R', 'Y', 'U', 'C', 'O', 'N', 'S' };
+typedef struct {
+        char magic[8];
+        uint32_t checksum;
+        uint32_t length;
+        //uint16_t version;
+        Input default_input;
+        uint8_t smoothing;
+} ConvSettings;
+static EEMEM ConvSettings eeprom_settings;
+static ConvSettings settings;
 
 #if ERROR_PANIC
 __attribute__((noreturn))
@@ -413,8 +422,7 @@ int main(void)
     serial.setup(9600, DATA_EIGHT, STOP_ONE, PARITY_DISABLED);
 #endif
 
-    ConvSettings eepdata;
-    eeprom_read_block(&eepdata, &settings, sizeof(settings));
+    eeprom_read_block(&settings, &eeprom_settings, sizeof(eeprom_settings));
 
     sei();
 
