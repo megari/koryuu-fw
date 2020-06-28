@@ -15,33 +15,46 @@ namespace crc {
     static_assert(sizeof(size_t) > 1, "size_t is too small");
     static_assert(sizeof(unsigned long) >= 4, "unsigned long is too small");
 
-    uint32_t crc32_for_byte(uint32_t r)
-    {
-        for (uint8_t j = 0; j < 8; ++j)
-            r = (r & 1 ? 0 : (uint32_t)0xEDB88320UL) ^ r >> 1;
-        return r ^ (uint32_t)0xFF000000UL;
-    }
-
     namespace internal {
-        // Rquires 1 kB of memory...
-        uint32_t table[0x100] = { 0UL };
+        constexpr uint32_t crc32_for_byte(const uint32_t r_)
+        {
+            uint32_t r = r_;
+            for (uint8_t j = 0; j < 8; ++j)
+                r = (r & 1 ? 0 : (uint32_t)0xEDB88320UL) ^ r >> 1;
+            return r ^ (uint32_t)0xFF000000UL;
+        }
+
+        template<uint32_t size>
+        struct crc32_shim {
+            using arr_type = uint32_t[size];
+            arr_type arr;
+        };
+
+        template<uint32_t size>
+        constexpr auto crc32_table() -> const crc32_shim<size> {
+            crc32_shim<size> ret = { 0UL };
+            for (uint32_t i = 0; i < size; ++i) {
+                ret.arr[i] = crc32_for_byte(i);
+            }
+            return ret;
+        }
+
+        // Requires 1 kB of data memory, which is about 50% of it.
+        // Hopefully this won't be a problem.
+        const constexpr auto crc32table = crc32_table<0x100UL>();
     }
 
     template<typename T>
     uint32_t crc32(const T *const data_T, const size_t n_bytes,
-            const uint32_t *const init)
+            const uint32_t *const init = nullptr)
     {
-        using internal::table;
         using yaal::autounion;
+        const constexpr auto &table = internal::crc32table.arr;
         const uint8_t *data = reinterpret_cast<const uint8_t *>(data_T);
         autounion<uint32_t, true> crc(init ? *init : 0UL);
 
-        if (!table[0])
-            for (size_t i = 0; i < 0x100UL; ++i)
-                table[i] = crc32_for_byte(i);
-
         for (size_t i = 0; i < n_bytes; ++i)
-            crc[0] = table[crc[0] ^ data[i]] ^ crc[0] >> 8;
+            crc.value() = table[crc[0] ^ data[i]] ^ crc.value() >> 8UL;
         return crc;
     }
 }

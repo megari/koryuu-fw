@@ -15,6 +15,8 @@
 
 #include <avr/eeprom.h>
 
+#define USE_CRC32 1
+
 #ifndef DEBUG
     #define DEBUG 0
 #endif
@@ -421,9 +423,6 @@ int main(void)
 #if DEBUG || CALIBRATE
     serial.setup(9600, DATA_EIGHT, STOP_ONE, PARITY_DISABLED);
 #endif
-
-    eeprom_read_block(&settings, &eeprom_settings, sizeof(eeprom_settings));
-
     sei();
 
     _delay_ms(6);
@@ -450,8 +449,13 @@ int main(void)
     return 0;
 #endif
 
+    eeprom_read_block(&settings, &eeprom_settings, sizeof(eeprom_settings));
 #if DEBUG
     serial << _T("converter starting...\r\n");
+#if USE_CRC32
+    uint32_t settings_crc32 = crc::crc32(&settings, sizeof(settings));
+    serial << _T("Settings crc32: 0x") << ashex(settings_crc32) << _T("\r\n");
+#endif
 #endif
 
     setup_video(INPUT_CVBS, false, false);
