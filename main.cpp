@@ -5,6 +5,7 @@
 #include <yaal/io/serial.hh>
 #include <yaal/communication/i2c_hw.hh>
 
+#include <avr/eeprom.h>
 #include <util/delay.h>
 
 #include "adv7280.hh"
@@ -12,10 +13,7 @@
 #include "i2c_helpers.hh"
 #include "crc32.hh"
 #include "debounce.hh"
-
-#include <avr/eeprom.h>
-
-#define USE_CRC32 1
+#include "koryuu_settings.hh"
 
 #ifndef DEBUG
     #define DEBUG 0
@@ -62,26 +60,16 @@ PortB6 led_OPT;
 Serial0 serial;
 #endif
 
-enum Input : uint8_t {
-    CVBS,
-    CVBS_PEDESTAL,
-    SVIDEO,
-    SVIDEO_PEDESTAL,
-};
+using koryuu_settings::Input;
+using koryuu_settings::Input::CVBS;
+using koryuu_settings::Input::CVBS_PEDESTAL;
+using koryuu_settings::Input::SVIDEO;
+using koryuu_settings::Input::SVIDEO_PEDESTAL;
 Input curr_input;
 
-static constexpr char SETTINGS_MAGIC[8] =
-        { 'K', 'R', 'Y', 'U', 'C', 'O', 'N', 'S' };
-typedef struct {
-        char magic[8];
-        uint32_t checksum;
-        uint32_t length;
-        //uint16_t version;
-        Input default_input;
-        uint8_t smoothing;
-} ConvSettings;
+using koryuu_settings::ConvSettings;
+using koryuu_settings::KoryuuSettings;
 static EEMEM ConvSettings eeprom_settings;
-static ConvSettings settings;
 
 #if ERROR_PANIC
 __attribute__((noreturn))
@@ -449,13 +437,14 @@ int main(void)
     return 0;
 #endif
 
-    eeprom_read_block(&settings, &eeprom_settings, sizeof(eeprom_settings));
+    KoryuuSettings settings(&eeprom_settings);
 #if DEBUG
     serial << _T("converter starting...\r\n");
-#if USE_CRC32
-    uint32_t settings_crc32 = crc::crc32(&settings, sizeof(settings));
+    uint32_t settings_hdr_crc32 = settings.settings.hdr.checksum;
+    uint32_t settings_crc32 = settings.settings.checksum;
+    serial << _T("Settings hdr crc32: 0x") << ashex(settings_hdr_crc32)
+        << _T("\r\n");
     serial << _T("Settings crc32: 0x") << ashex(settings_crc32) << _T("\r\n");
-#endif
 #endif
 
     setup_video(INPUT_CVBS, false, false);
