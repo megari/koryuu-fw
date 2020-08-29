@@ -486,20 +486,32 @@ int main(void)
         if (input_change.read()) {
             switch (curr_input) {
             case CVBS:
+#if DEBUG
+                serial << _T("Transition: CVBS -> CVBS_PEDESTAL\r\n");
+#endif
                 decoder.select_autodetection(AD_PALBGHID_NTSCM_SECAM);
                 curr_input = CVBS_PEDESTAL;
                 break;
             case CVBS_PEDESTAL:
+#if DEBUG
+                serial << _T("Transition: CVBS_PEDESTAL -> SVIDEO\r\n");
+#endif
                 setup_video(INPUT_SVIDEO, false, false);
                 curr_input = SVIDEO;
                 led_CVBS = false;
                 led_YC = true;
                 break;
             case SVIDEO:
+#if DEBUG
+                serial << _T("Transition: SVIDEO -> SVIDEO_PEDESTAL\r\n");
+#endif
                 decoder.select_autodetection(AD_PALBGHID_NTSCM_SECAM);
                 curr_input = SVIDEO_PEDESTAL;
                 break;
             case SVIDEO_PEDESTAL:
+#if DEBUG
+                serial << _T("Transition: SVIDEO_PEDESTAL -> CVBS\r\n");
+#endif
                 setup_video(INPUT_CVBS, false, false);
                 curr_input = CVBS;
                 led_CVBS = true;
