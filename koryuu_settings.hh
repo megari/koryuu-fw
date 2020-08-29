@@ -21,6 +21,25 @@ namespace koryuu_settings {
         SVIDEO_PEDESTAL,
     };
 
+    enum PhysInput : uint8_t {
+        INPUT_CVBS = 0,
+        INPUT_SVIDEO = 1,
+    };
+
+    PhysInput input_to_phys[] = {
+        [CVBS] = INPUT_CVBS,
+        [CVBS_PEDESTAL] = INPUT_CVBS,
+        [SVIDEO] = INPUT_SVIDEO,
+        [SVIDEO_PEDESTAL] = INPUT_SVIDEO,
+    };
+
+    bool input_to_pedestal[] = {
+        [CVBS] = false,
+        [CVBS_PEDESTAL] = true,
+        [SVIDEO] = false,
+        [SVIDEO_PEDESTAL] = true,
+    };
+
     struct SettingsHeader {
         char magic[8];
         uint32_t length;
@@ -107,6 +126,14 @@ namespace koryuu_settings {
                         offsetof(decltype(settings), checksum));
                 dirty = true;
             }
+        }
+
+        bool is_dirty() const {
+            return dirty;
+        }
+
+        void set_dirty() {
+                dirty = true;
         }
 
         void write() {

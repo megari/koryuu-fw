@@ -194,12 +194,13 @@ static inline void setup_ad_black_magic()
     I2C_WRITE(decoder.address, 0x82, 0x68);
 }
 
-enum ConvInputSelection : uint8_t {
-    INPUT_CVBS   = 0,
-    INPUT_SVIDEO = 1,
-};
+using koryuu_settings::PhysInput;
+using koryuu_settings::PhysInput::INPUT_CVBS;
+using koryuu_settings::PhysInput::INPUT_SVIDEO;
+using koryuu_settings::input_to_phys;
+using koryuu_settings::input_to_pedestal;
 
-static void set_smoothing(ConvInputSelection input, bool smoothing)
+static void set_smoothing(PhysInput input, bool smoothing)
 {
     if (smoothing) {
         // Shaping filter control 1, SVHS 3 luma & chroma LPF
@@ -229,7 +230,7 @@ static void set_smoothing(ConvInputSelection input, bool smoothing)
     decoder.set_aa_filters(!smoothing, false, false, false, false);
 }
 
-static void setup_video(ConvInputSelection input, bool pedestal, bool smoothing)
+static void setup_video(PhysInput input, bool pedestal, bool smoothing)
 {
     // Software reset decoder and encoder
     decoder.set_power_management(false, true);
@@ -448,9 +449,29 @@ int main(void)
     serial << _T("Settings crc32: 0x") << ashex(settings_crc32) << _T("\r\n");
 #endif
 
-    setup_video(INPUT_CVBS, false, false);
-    curr_input = CVBS;
-    led_CVBS = true;
+    // If the settings were (re-)initialized, write them back to EEPROM.
+    if (settings.is_dirty()) {
+#if DEBUG
+        serial << _T("EEPROM settings invalid, writing back defaults.\r\n");
+#endif
+        settings.write();
+    }
+
+    curr_input = settings.settings.default_input;
+    setup_video(input_to_phys[curr_input],
+        input_to_pedestal[curr_input], !!settings.settings.smoothing);
+    led_CVBS = input_to_phys[curr_input] == INPUT_CVBS;
+
+#if DEBUG
+        serial << _T("Initial settings:\r\n");
+        serial << _T("\tPhysical input: ")
+            << (input_to_phys[curr_input] == INPUT_CVBS ?
+                _T("CVBS") : _T("SVIDEO")) << _T("\r\n");
+        serial << _T("\tPedestal: ")
+            << asdec(input_to_pedestal[curr_input]) << _T("\r\n");
+        serial << _T("\tSmoothing: ")
+            << asdec(!!settings.settings.smoothing) << _T("\r\n");
+#endif
 
     // Main loop.
     // Reads the switch status, decoder interrupt line and the status registers.
