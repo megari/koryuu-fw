@@ -74,6 +74,13 @@ namespace ad_decoder {
         ID_MUST_CLEAR = 0xc0,
     };
 
+    enum VS_COAST_MODE : uint8_t {
+            COAST_MODE_AUTO = 0x00,
+            COAST_MODE_576I = 0x04,
+            COAST_MODE_480I = 0x08,
+            // COAST_MODE_RESERVED = 0x0c,
+    };
+
     constexpr uint8_t OUTC_TOD    = 0x40;
     constexpr uint8_t OUTC_VBI_EN = 0x80;
 
@@ -340,6 +347,19 @@ namespace ad_decoder {
             if (setup_submap)
                 select_submap(DEC_SUBMAP_USER);
         }
+
+        void set_vs_mode_control(bool extend_vs_max_freq,
+                        bool extend_vs_min_freq,
+                        VS_COAST_MODE coast_mode)
+        {
+            uint8_t outc = 0x00 | coast_mode;
+            if (extend_vs_max_freq)
+                outc |= 0x01;
+            if (extend_vs_min_freq)
+                outc |= 0x02;
+            I2C_WRITE(address, 0xf9, outc);
+        }
+
     };
 }
 

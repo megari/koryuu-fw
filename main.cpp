@@ -345,6 +345,10 @@ static void setup_video(PhysInput input, bool pedestal, bool smoothing)
     // Output SFL on the VS/FIELD/SFL pin
     I2C_WRITE(decoder.address, 0x6b, 0x14);
 
+    // VS mode control
+    // Force the free run mode video standard to 480i.
+    decoder.set_vs_mode_control(true, true, COAST_MODE_480I);
+
 #if 0
     // Drive strength of digital outputs
     // Low drive strength for all
