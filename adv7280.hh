@@ -107,9 +107,9 @@ namespace ad_decoder {
     template<typename INTRQ, typename RESET, typename PWRDWN>
     class ADV7280A {
     public:
-        INTRQ intrq;
-        RESET reset;
-        PWRDWN pwrdwn;
+        INTRQ intrq; // Active low, should be pulled high
+        RESET reset; // Active low
+        PWRDWN pwrdwn; // Active low
 
         uint8_t address;
         uint8_t vpp_address;

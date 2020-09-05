@@ -60,6 +60,12 @@ PortB6 led_OPT;
 Serial0 serial;
 #endif
 
+enum : uint8_t {
+    INTERLACE_STATUS_UNKNOWN = 0,
+    INTERLACE_STATUS_INTERLACED = 1,
+    INTERLACE_STATUS_PROGRESSIVE = 2,
+} interlace_status = INTERLACE_STATUS_UNKNOWN;
+
 using koryuu_settings::Input;
 using koryuu_settings::Input::CVBS;
 using koryuu_settings::Input::CVBS_PEDESTAL;
@@ -128,6 +134,11 @@ static void setup_timer0()
 static void setup_encoder()
 {
 #if 0
+    // Software reset. Ignore the I2C transaction failure.
+    I2C_WRITE<false>(encoder.address, 0x17, 0x02);
+    _delay_ms(1);
+#endif
+#if 0
     // All DACs and PLL enabled
     I2C_WRITE(encoder.address, 0x00, 0x1c);
 #else
@@ -150,14 +161,21 @@ static void setup_encoder()
     // Pixel data valid, YPrPb, PrPb SSAF filter, AVE control, pedestal
     I2C_WRITE(encoder.address, 0x82, 0xc9);
 #else
-    // Pixel data valid, YPrPb, *no* PrPb SSAF filter, AVE control, pedestal
-    I2C_WRITE(encoder.address, 0x82, 0xc8);
+    // Pixel data invalid, YPrPb, *no* PrPb SSAF filter, AVE control, pedestal
+    I2C_WRITE(encoder.address, 0x82, 0x88);
 #endif
 
 #if 0
     // Enable VBI. Otherwise default.
     // XXX: This will override the blanking bit in EAV/SAV!
     I2C_WRITE(encoder.address, 0x83, 0x14);
+#else
+    // No SD pedestal YPrPb
+    // SD output level for Y: 700mV/300mV
+    // SD output level for PrPb: PAL 700mV, NTSC 1000mV
+    // SD VBI disabled
+    // SD closed captioning disabled
+    I2C_WRITE(encoder.address, 0x83, 0x00);
 #endif
 
     // Enable subcarrier frequency lock
@@ -166,8 +184,22 @@ static void setup_encoder()
     // Autodetect SD input standard
     I2C_WRITE(encoder.address, 0x87, 0x20);
 
-    // Enable SD progressive mode
-    I2C_WRITE(encoder.address, 0x88, 0x02);
+    if (interlace_status == INTERLACE_STATUS_INTERLACED) {
+        // Disable SD progressive mode
+        I2C_WRITE(encoder.address, 0x88, 0x00);
+    }
+    else {
+        // Enable SD progressive mode
+        I2C_WRITE(encoder.address, 0x88, 0x02);
+    }
+
+#if 0
+    // Pixel data valid, YPrPb, PrPb SSAF filter, AVE control, pedestal
+    I2C_WRITE(encoder.address, 0x82, 0xc9);
+#else
+    // Pixel data valid, YPrPb, *no* PrPb SSAF filter, AVE control, pedestal
+    I2C_WRITE(encoder.address, 0x82, 0xc8);
+#endif
 
 #if ENC_TEST_PATTERN
     // Color bar test pattern
@@ -232,7 +264,8 @@ static void set_smoothing(PhysInput input, bool smoothing)
 
 static void setup_video(PhysInput input, bool pedestal, bool smoothing)
 {
-    // Software reset decoder and encoder
+    // Software reset decoder and encoder.
+    // Ignore the I2C transaction failure.
     decoder.set_power_management(false, true);
     I2C_WRITE<false>(encoder.address, 0x17, 0x02);
 
@@ -419,11 +452,31 @@ int main(void)
 #endif
     sei();
 
-    _delay_ms(6);
-    decoder.reset = true;
+    /*
+     * ADV7280A simplified power-up sequence:
+     * 0. Initially: /RESET and /PWRDWN are low.
+     * 1. Pull /PWRDWN high.
+     * 2. Wait at least 5 ms.
+     * 3. Pull /RESET high.
+     * 4. Wait at least 5 ms.
+     * 5. Power-up complete. I2C is usable.
+     *
+     * ADV7391 power-up sequence:
+     * 0. Initially, /RESET is low.
+     * 1. Pull /RESET high.
+     * 2. Wait at least 100 ns.
+     * 3. Pull /RESET low.
+     * 4. Wait at least 100 ns.
+     * 5. Pull /RESET high.
+     * 6. Power-up complete. I2C is usable.
+     */
     decoder.pwrdwn = true;
     encoder.reset = true;
     _delay_ms(10);
+    decoder.reset = true;
+    encoder.reset = false;
+    _delay_ms(10);
+    encoder.reset = true;
 
 #if CALIBRATE
     const auto old_osccal = OSCCAL;
@@ -485,7 +538,7 @@ int main(void)
 #endif
     uint8_t dec_status3 = 0x00;
     bool got_interrupt = false;
-    bool check_once_more = false;
+    bool check_once_more = true;
     while (1) {
         if (input_change.read()) {
             switch (curr_input) {
@@ -493,6 +546,7 @@ int main(void)
 #if DEBUG
                 serial << _T("Transition: CVBS -> CVBS_PEDESTAL\r\n");
 #endif
+                //interlace_status = INTERLACE_STATUS_UNKNOWN;
                 decoder.select_autodetection(AD_PALBGHID_NTSCM_SECAM);
                 curr_input = CVBS_PEDESTAL;
                 break;
@@ -500,6 +554,7 @@ int main(void)
 #if DEBUG
                 serial << _T("Transition: CVBS_PEDESTAL -> SVIDEO\r\n");
 #endif
+                interlace_status = INTERLACE_STATUS_UNKNOWN;
                 setup_video(INPUT_SVIDEO, false, false);
                 curr_input = SVIDEO;
                 led_CVBS = false;
@@ -516,6 +571,7 @@ int main(void)
 #if DEBUG
                 serial << _T("Transition: SVIDEO_PEDESTAL -> CVBS\r\n");
 #endif
+                interlace_status = INTERLACE_STATUS_UNKNOWN;
                 setup_video(INPUT_CVBS, false, false);
                 curr_input = CVBS;
                 led_CVBS = true;
@@ -541,7 +597,8 @@ int main(void)
 
         got_interrupt = !decoder.intrq;
 
-        if (got_interrupt || check_once_more) {
+        if (got_interrupt || check_once_more ||
+            interlace_status == INTERLACE_STATUS_UNKNOWN) {
 #if DEBUG
             if (got_interrupt) {
                 serial << _T("Interrupt\r\n");
@@ -642,6 +699,17 @@ int main(void)
 #endif
             }
             dec_status3 = new_status3;
+            bool ilace_flag = !!(dec_status3 & 0x40);
+            if (ilace_flag && interlace_status != INTERLACE_STATUS_INTERLACED) {
+                interlace_status = INTERLACE_STATUS_INTERLACED;
+                setup_encoder();
+            }
+            else if (!ilace_flag &&
+                interlace_status != INTERLACE_STATUS_PROGRESSIVE)
+            {
+                interlace_status = INTERLACE_STATUS_PROGRESSIVE;
+                setup_encoder();
+            }
 
             // Clear all interrupt flags...
             if (got_interrupt) {
