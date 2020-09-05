@@ -128,6 +128,10 @@ static void setup_timer0()
 static void setup_encoder()
 {
 #if 0
+    I2C_WRITE<false>(encoder.address, 0x17, 0x02);
+    _delay_ms(3);
+#endif
+#if 0
     // All DACs and PLL enabled
     I2C_WRITE(encoder.address, 0x00, 0x1c);
 #else
@@ -150,14 +154,21 @@ static void setup_encoder()
     // Pixel data valid, YPrPb, PrPb SSAF filter, AVE control, pedestal
     I2C_WRITE(encoder.address, 0x82, 0xc9);
 #else
-    // Pixel data valid, YPrPb, *no* PrPb SSAF filter, AVE control, pedestal
-    I2C_WRITE(encoder.address, 0x82, 0xc8);
+    // Pixel data invalid, YPrPb, *no* PrPb SSAF filter, AVE control, pedestal
+    I2C_WRITE(encoder.address, 0x82, 0x88);
 #endif
 
 #if 0
     // Enable VBI. Otherwise default.
     // XXX: This will override the blanking bit in EAV/SAV!
     I2C_WRITE(encoder.address, 0x83, 0x14);
+#else
+    // No SD pedestal YPrPb
+    // SD output level for Y: 700mV/300mV
+    // SD output level for PrPb: PAL 700mV, NTSC 1000mV
+    // SD VBI disabled
+    // SD closed captioning disabled
+    I2C_WRITE(encoder.address, 0x83, 0x00);
 #endif
 
     // Enable subcarrier frequency lock
@@ -167,7 +178,15 @@ static void setup_encoder()
     I2C_WRITE(encoder.address, 0x87, 0x20);
 
     // Enable SD progressive mode
-    I2C_WRITE(encoder.address, 0x88, 0x02);
+    //I2C_WRITE(encoder.address, 0x88, 0x02);
+
+#if 0
+    // Pixel data valid, YPrPb, PrPb SSAF filter, AVE control, pedestal
+    I2C_WRITE(encoder.address, 0x82, 0xc9);
+#else
+    // Pixel data valid, YPrPb, *no* PrPb SSAF filter, AVE control, pedestal
+    I2C_WRITE(encoder.address, 0x82, 0xc8);
+#endif
 
 #if ENC_TEST_PATTERN
     // Color bar test pattern
@@ -422,6 +441,10 @@ int main(void)
     _delay_ms(6);
     decoder.reset = true;
     decoder.pwrdwn = true;
+    encoder.reset = true;
+    _delay_ms(10);
+    encoder.reset = false;
+    _delay_ms(10);
     encoder.reset = true;
     _delay_ms(10);
 
