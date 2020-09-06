@@ -288,6 +288,50 @@ namespace ad_decoder {
                 select_submap(DEC_SUBMAP_USER);
         }
 
+        void interrupt_clear2(bool clear_ccapd, bool clear_sd_field_change,
+                bool clear_chx_min_max, bool clear_manual_intr,
+                bool setup_submap = true)
+        {
+            if (setup_submap)
+                select_submap(DEC_SUBMAP_INTR_VDP);
+
+            uint8_t iclr2 = 0x00;
+            if (clear_ccapd)
+                iclr2 |= 0x01;
+            if (clear_sd_field_change)
+                iclr2 |= 0x10;
+            if (clear_chx_min_max)
+                iclr2 |= 0x20;
+            if (clear_manual_intr)
+                iclr2 |= 0x80;
+            I2C_WRITE(address, 0x47, iclr2);
+
+            if (setup_submap)
+                select_submap(DEC_SUBMAP_USER);
+        }
+
+        void set_interrupt_mask2(bool unmask_ccapd,
+                bool unmask_sd_field_change, bool unmask_chx_min_max,
+                bool unmask_manual_intr, bool setup_submap = true)
+        {
+            if (setup_submap)
+                select_submap(DEC_SUBMAP_INTR_VDP);
+
+            uint8_t imsk2 = 0x00;
+            if (unmask_ccapd)
+                imsk2 |= 0x01;
+            if (unmask_sd_field_change)
+                imsk2 |= 0x10;
+            if (unmask_chx_min_max)
+                imsk2 |= 0x20;
+            if (unmask_manual_intr)
+                imsk2 |= 0x80;
+            I2C_WRITE(address, 0x48, imsk2);
+
+            if (setup_submap)
+                select_submap(DEC_SUBMAP_USER);
+        }
+
         void interrupt_clear3(bool clear_sd_op_change,
                 bool clear_sd_vsync_lock_change,
                 bool clear_sd_hsync_lock_change,
