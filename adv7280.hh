@@ -75,10 +75,10 @@ namespace ad_decoder {
     };
 
     enum VS_COAST_MODE : uint8_t {
-            COAST_MODE_AUTO = 0x00,
-            COAST_MODE_576I = 0x04,
-            COAST_MODE_480I = 0x08,
-            // COAST_MODE_RESERVED = 0x0c,
+        COAST_MODE_AUTO = 0x00,
+        COAST_MODE_576I = 0x04,
+        COAST_MODE_480I = 0x08,
+        // COAST_MODE_RESERVED = 0x0c,
     };
 
     constexpr uint8_t OUTC_TOD    = 0x40;
