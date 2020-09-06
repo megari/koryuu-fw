@@ -187,14 +187,14 @@ static void setup_encoder()
     if (interlace_status == INTERLACE_STATUS_INTERLACED) {
         // Disable SD progressive mode
         I2C_WRITE(encoder.address, 0x88, 0x00);
-#ifdef DEBUG
+#if DEBUG
         serial << _T("Encoder: disabled SD progressive mode\r\n");
 #endif // DEBUG
     }
     else {
         // Enable SD progressive mode
         I2C_WRITE(encoder.address, 0x88, 0x02);
-#ifdef DEBUG
+#if DEBUG
         serial << _T("Encoder: enabled SD progressive mode\r\n");
         if (interlace_status == INTERLACE_STATUS_UNKNOWN)
             serial << _T("         (status was unknown)\r\n");
