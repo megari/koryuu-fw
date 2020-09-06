@@ -620,6 +620,14 @@ int main(void)
                 serial << _T("Interrupt status 1: 0x") << ashex(intrs1) << _T("\r\n");
                 serial << _T("Interrupt status 2: 0x") << ashex(intrs2) << _T("\r\n");
                 serial << _T("Interrupt status 3: 0x") << ashex(intrs3) << _T("\r\n");
+
+                if (intrs2 & 0x10) {
+                    uint8_t new_field_status =
+                        !!(I2C_READ_ONE(decoder.address, 0x45) & 0x10);
+                    serial << _T("Field changed to ") <<
+                        (new_field_status ? _T("even") : _T("odd")) << _T("\r\n");
+                    serial << _T("\r\n");
+                }
             }
 
             uint8_t new_status1 = I2C_READ_ONE(decoder.address, 0x10);
