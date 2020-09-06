@@ -187,10 +187,18 @@ static void setup_encoder()
     if (interlace_status == INTERLACE_STATUS_INTERLACED) {
         // Disable SD progressive mode
         I2C_WRITE(encoder.address, 0x88, 0x00);
+#ifdef DEBUG
+        serial << _T("Encoder: disabled SD progressive mode\r\n");
+#endif // DEBUG
     }
     else {
         // Enable SD progressive mode
         I2C_WRITE(encoder.address, 0x88, 0x02);
+#ifdef DEBUG
+        serial << _T("Encoder: enabled SD progressive mode\r\n");
+        if (interlace_status == INTERLACE_STATUS_UNKNOWN)
+            serial << _T("         (status was unknown)\r\n");
+#endif // DEBUG
     }
 
 #if 0
@@ -298,6 +306,8 @@ static void setup_video(PhysInput input, bool pedestal, bool smoothing)
     decoder.select_submap(DEC_SUBMAP_INTR_VDP);
     decoder.set_interrupt_mask1(true, true, true, true, false);
     decoder.interrupt_clear1(true, true, true, true, false);
+    decoder.set_interrupt_mask2(false, true, false, false, false);
+    decoder.interrupt_clear2(true, true, true, true, false);
     decoder.set_interrupt_mask3(true, true, true, true, true, true, false);
     decoder.interrupt_clear3(true, true, true, true, true, true, false);
     decoder.set_interrupt_config(IDL_ACTIVE_LOW, false, 0x10, ID_MUST_CLEAR, false);
@@ -604,9 +614,11 @@ int main(void)
                 serial << _T("Interrupt\r\n");
                 decoder.select_submap(DEC_SUBMAP_INTR_VDP);
                 uint8_t intrs1 = I2C_READ_ONE(decoder.address, 0x42);
+                uint8_t intrs2 = I2C_READ_ONE(decoder.address, 0x46);
                 uint8_t intrs3 = I2C_READ_ONE(decoder.address, 0x4a);
                 decoder.select_submap(DEC_SUBMAP_USER);
                 serial << _T("Interrupt status 1: 0x") << ashex(intrs1) << _T("\r\n");
+                serial << _T("Interrupt status 2: 0x") << ashex(intrs2) << _T("\r\n");
                 serial << _T("Interrupt status 3: 0x") << ashex(intrs3) << _T("\r\n");
             }
 
@@ -715,6 +727,7 @@ int main(void)
             if (got_interrupt) {
                 decoder.select_submap(DEC_SUBMAP_INTR_VDP);
                 decoder.interrupt_clear1(true, true, true, true, false);
+                decoder.interrupt_clear2(true, true, true, true, false);
                 decoder.interrupt_clear3(true, true, true, true, true, true, false);
                 decoder.select_submap(DEC_SUBMAP_USER);
             }
