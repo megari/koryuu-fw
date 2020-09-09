@@ -640,7 +640,7 @@ int main(void)
 
         if (got_interrupt || check_once_more ||
             interlace_status == INTERLACE_STATUS_UNKNOWN) {
-#if DEBUG
+#if DEBUG > 1
             if (got_interrupt) {
                 serial << _T("Interrupt\r\n");
                 decoder.select_submap(DEC_SUBMAP_INTR_VDP);
@@ -664,7 +664,9 @@ int main(void)
                     serial << _T("\r\n");
                 }
             }
+#endif // DEBUG > 1
 
+#if DEBUG
             uint8_t new_status1 = I2C_READ_ONE(decoder.address, 0x10);
             uint8_t new_status2 = I2C_READ_ONE(decoder.address, 0x12);
 #endif
