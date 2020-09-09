@@ -532,6 +532,8 @@ int main(void)
     setup_video(input_to_phys[curr_input],
         input_to_pedestal[curr_input], !!settings.settings.smoothing);
     led_CVBS = input_to_phys[curr_input] == INPUT_CVBS;
+    led_YC = input_to_phys[curr_input] == INPUT_SVIDEO;
+    led_OPT = !!settings.settings.smoothing;
 
 #if DEBUG
         serial << _T("Initial settings:\r\n");
