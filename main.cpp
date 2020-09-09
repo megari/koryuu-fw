@@ -310,7 +310,8 @@ static void setup_video(PhysInput input, bool pedestal, bool smoothing)
     decoder.interrupt_clear2(true, true, true, true, false);
     decoder.set_interrupt_mask3(true, true, true, true, true, true, false);
     decoder.interrupt_clear3(true, true, true, true, true, true, false);
-    decoder.set_interrupt_config(IDL_ACTIVE_LOW, false, 0x10, ID_MUST_CLEAR, false);
+    decoder.set_interrupt_config(
+        IDL_ACTIVE_LOW, false, 0x10, ID_MUST_CLEAR, false);
     decoder.select_submap(DEC_SUBMAP_USER);
 
     // Autodetect SD video mode
@@ -403,7 +404,8 @@ static void setup_video(PhysInput input, bool pedestal, bool smoothing)
 }
 
 #if DEBUG > 1
-static void i2c_trace(uint8_t addr, const uint8_t *begin, const uint8_t *end, bool start, bool stop)
+static void i2c_trace(uint8_t addr,
+        const uint8_t *begin, const uint8_t *end, bool start, bool stop)
 {
     serial << _T("I2C write (start == ") << asdec(start) << _T(", stop == ")
            << asdec(stop) << _T(") to addr 0x") << ashex(addr) << _T(": { ");
@@ -496,7 +498,9 @@ int main(void)
         OSCCAL = i;
         _delay_ms(10);
         serial << _T("OSCCAL = 0x") << ashex(i) << _T(" (old: 0x")
-            << ashex(old_osccal) << _T(") The quick brown fox jumps over the lazy dog. åäö, ÅÄÖ\r\n");
+            << ashex(old_osccal)
+            << _T(") The quick brown fox jumps over the lazy dog. åäö,"
+                " ÅÄÖ\r\n");
         OSCCAL = old_osccal;
         for (size_t j = 0; j < 10; ++j)
             serial << _T("\r\n");
@@ -644,15 +648,19 @@ int main(void)
                 uint8_t intrs2 = I2C_READ_ONE(decoder.address, 0x46);
                 uint8_t intrs3 = I2C_READ_ONE(decoder.address, 0x4a);
                 decoder.select_submap(DEC_SUBMAP_USER);
-                serial << _T("Interrupt status 1: 0x") << ashex(intrs1) << _T("\r\n");
-                serial << _T("Interrupt status 2: 0x") << ashex(intrs2) << _T("\r\n");
-                serial << _T("Interrupt status 3: 0x") << ashex(intrs3) << _T("\r\n");
+                serial << _T("Interrupt status 1: 0x") << ashex(intrs1)
+                    << _T("\r\n");
+                serial << _T("Interrupt status 2: 0x") << ashex(intrs2)
+                    << _T("\r\n");
+                serial << _T("Interrupt status 3: 0x") << ashex(intrs3)
+                    << _T("\r\n");
 
                 if (intrs2 & 0x10) {
                     uint8_t new_field_status =
                         !!(I2C_READ_ONE(decoder.address, 0x45) & 0x10);
-                    serial << _T("Field changed to ") <<
-                        (new_field_status ? _T("even") : _T("odd")) << _T("\r\n");
+                    serial << _T("Field changed to ")
+                        << (new_field_status ? _T("even") : _T("odd"))
+                        << _T("\r\n");
                     serial << _T("\r\n");
                 }
             }
@@ -666,10 +674,14 @@ int main(void)
 #if DEBUG
             if (new_status1 != dec_status1) {
                 serial << _T("Status 1 changed:\r\n");
-                serial << _T("In lock: ") << asdec(new_status1 & 0x01) << _T("\r\n");
-                serial << _T("Lost lock: ") << asdec(!!(new_status1 & 0x02)) << _T("\r\n");
-                serial << _T("fSC lock: ") << asdec(!!(new_status1 & 0x04)) << _T("\r\n");
-                serial << _T("Follow PW: ") << asdec(!!(new_status1 & 0x08)) << _T("\r\n");
+                serial << _T("In lock: ") << asdec(new_status1 & 0x01)
+                    << _T("\r\n");
+                serial << _T("Lost lock: ") << asdec(!!(new_status1 & 0x02))
+                    << _T("\r\n");
+                serial << _T("fSC lock: ") << asdec(!!(new_status1 & 0x04))
+                    << _T("\r\n");
+                serial << _T("Follow PW: ") << asdec(!!(new_status1 & 0x08))
+                    << _T("\r\n");
                 serial << _T("Video standard: ");
                 switch ((new_status1 >> 4) & 0x07) {
                 case 0x00:
@@ -697,7 +709,8 @@ int main(void)
                     serial << _T("SECAM 525\r\n");
                     break;
                 }
-                serial << _T("Color kill: ") << asdec(!!(new_status1 & 0x80)) << _T("\r\n");
+                serial << _T("Color kill: ") << asdec(!!(new_status1 & 0x80))
+                    << _T("\r\n");
 
 #if 1
                 uint8_t fsc[4] = { 0, 0, 0, 0 };
@@ -712,8 +725,10 @@ int main(void)
                 // Actually, the calculation is more involved.
                 // See the ADV7391 datasheet, section "SD Subcarrier frequency
                 // control"
-                serial << _T("Subcarrier frequency reg: 0x") << ashex(fsc32) << _T("\r\n");
-                serial << _T("Subcarrier frequency reg: ") << asdec(fsc32) << _T("\r\n");
+                serial << _T("Subcarrier frequency reg: 0x") << ashex(fsc32)
+                    << _T("\r\n");
+                serial << _T("Subcarrier frequency reg: ") << asdec(fsc32)
+                    << _T("\r\n");
 #endif
 
                 serial << _T("\r\n");
@@ -722,12 +737,18 @@ int main(void)
 
             if (new_status2 != dec_status2) {
                 serial << _T("Status 2 changed:\r\n");
-                serial << _T("Macrovision color striping detected: ") << asdec(!!(new_status2 & 0x01)) << _T("\r\n");
-                serial << _T("Macrovision color striping type: ") << asdec(!!(new_status2 & 0x02)) << _T("\r\n");
-                serial << _T("Macrovision pseudo sync pulses detected: ") << asdec(!!(new_status2 & 0x04)) << _T("\r\n");
-                serial << _T("Macrovision AGC pulses detected: ") << asdec(!!(new_status2 & 0x08)) << _T("\r\n");
-                serial << _T("Line length nonstandard: ") << asdec(!!(new_status2 & 0x10)) << _T("\r\n");
-                serial << _T("fSC nonstandard: ") << asdec(!!(new_status2 & 0x20)) << _T("\r\n");
+                serial << _T("Macrovision color striping detected: ")
+                    << asdec(!!(new_status2 & 0x01)) << _T("\r\n");
+                serial << _T("Macrovision color striping type: ")
+                    << asdec(!!(new_status2 & 0x02)) << _T("\r\n");
+                serial << _T("Macrovision pseudo sync pulses detected: ")
+                    << asdec(!!(new_status2 & 0x04)) << _T("\r\n");
+                serial << _T("Macrovision AGC pulses detected: ")
+                    << asdec(!!(new_status2 & 0x08)) << _T("\r\n");
+                serial << _T("Line length nonstandard: ")
+                    << asdec(!!(new_status2 & 0x10)) << _T("\r\n");
+                serial << _T("fSC nonstandard: ")
+                    << asdec(!!(new_status2 & 0x20)) << _T("\r\n");
                 serial << _T("\r\n");
             }
             dec_status2 = new_status2;
@@ -736,12 +757,19 @@ int main(void)
             if (new_status3 != dec_status3) {
 #if DEBUG
                 serial << _T("Status 3 changed:\r\n");
-                serial << _T("Horizontal lock: ") << asdec(new_status3 & 0x01) << _T("\r\n");
-                serial << _T("Frequency: ") << ((new_status3 & 0x04) ? _T("50") : _T("60")) << _T("\r\n");
-                serial << _T("Freerun active: ") << asdec(!!(new_status3 & 0x10)) << _T("\r\n");
-                serial << _T("Field length standard: ") << asdec(!!(new_status3 & 0x20)) << _T("\r\n");
-                serial << _T("Interlaced: ") << asdec(!!(new_status3 & 0x40)) << _T("\r\n");
-                serial << _T("PAL SW lock: ") << asdec(!!(new_status3 & 0x80)) << _T("\r\n");
+                serial << _T("Horizontal lock: ") << asdec(new_status3 & 0x01)
+                    << _T("\r\n");
+                serial << _T("Frequency: ")
+                    << ((new_status3 & 0x04) ? _T("50") : _T("60"))
+                    << _T("\r\n");
+                serial << _T("Freerun active: ")
+                    << asdec(!!(new_status3 & 0x10)) << _T("\r\n");
+                serial << _T("Field length standard: ")
+                    << asdec(!!(new_status3 & 0x20)) << _T("\r\n");
+                serial << _T("Interlaced: ")
+                    << asdec(!!(new_status3 & 0x40)) << _T("\r\n");
+                serial << _T("PAL SW lock: ")
+                    << asdec(!!(new_status3 & 0x80)) << _T("\r\n");
                 serial << _T("\r\n");
 #endif
             }
@@ -763,7 +791,8 @@ int main(void)
                 decoder.select_submap(DEC_SUBMAP_INTR_VDP);
                 decoder.interrupt_clear1(true, true, true, true, false);
                 decoder.interrupt_clear2(true, true, true, true, false);
-                decoder.interrupt_clear3(true, true, true, true, true, true, false);
+                decoder.interrupt_clear3(
+                    true, true, true, true, true, true, false);
                 decoder.select_submap(DEC_SUBMAP_USER);
             }
 
