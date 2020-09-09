@@ -99,7 +99,7 @@ namespace koryuu_settings {
             if (valid) {
                 uint32_t checksum;
                 size_t checksum_ofs;
-                autounion<ConvSettings, false, 2 * sizeof(ConvSettings)> s_u;
+                autounion<ConvSettings, true, 2 * sizeof(ConvSettings)> s_u;
 
                 // Check for ridiculous length
                 if (tmp_hdr.length > 2 * sizeof(ConvSettings))
@@ -171,8 +171,7 @@ namespace koryuu_settings {
                     crc::crc32(&settings,
                         offsetof(decltype(settings), checksum));
                 eeprom_update_block(&settings,
-                    eeprom_settings,
-                    sizeof(settings));
+                    eeprom_settings, sizeof(settings));
                 dirty = false;
             }
         }
