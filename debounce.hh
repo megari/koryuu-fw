@@ -12,11 +12,13 @@ namespace koryuu {
         class DebouncedButton {
                 ButtonPort button;
                 uint8_t counter;
+                const uint8_t debounce_factor;
                 bool state;
                 volatile bool is_down;
         public:
-                DebouncedButton()
-                        : button(), counter(0), state(false), is_down(false)
+                DebouncedButton(uint8_t db_factor = 16)
+                        : button(), counter(0), debounce_factor(db_factor),
+                        state(false), is_down(false)
                 {}
 
                 YAAL_INLINE("DBButton::set_mode()")
@@ -31,7 +33,7 @@ namespace koryuu {
                         bool curr_state = !button;
 
                         if (curr_state != state) {
-                            if (++counter == 4) {
+                            if (++counter == debounce_factor) {
                                 state = curr_state;
                                 if (state) {
                                     // Will be reset to false when read
