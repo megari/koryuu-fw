@@ -550,7 +550,34 @@ int main(void)
     bool got_interrupt = false;
     bool check_once_more = true;
     while (1) {
-        if (input_change.read()) {
+        bool input_change_pressed = input_change.read();
+        bool option_pressed = option.read();
+
+        if (input_change_pressed && option_pressed) {
+            // Save current settings to EEPROM.
+            settings.settings.default_input = curr_input;
+            settings.settings.smoothing = smoothing_enabled ? 0x01 : 0x00;
+            settings.set_dirty();
+#if DEBUG
+            serial << _T("Writing settings to EEPROM:\r\n");
+            serial << _T("\tDefault input: ");
+            auto input_str = (
+                curr_input == CVBS ? _T("Composite") :
+                curr_input == CVBS_PEDESTAL ?
+                    _T("Composite with pedestal") :
+                curr_input == SVIDEO ? _T("S-Video") :
+                curr_input == SVIDEO_PEDESTAL ?
+                    _T("S-Video with pedestal") :
+                _T("INVALID"));
+            serial << input_str << _T("\r\n");
+            serial << _T("\tSmoothing: ")
+                << (smoothing_enabled ? _T("on") : _T("off")) << _T("\r\n\r\n");
+#endif
+            settings.write();
+            input_change_pressed = option_pressed = false;
+        }
+
+        if (input_change_pressed) {
             switch (curr_input) {
             case CVBS:
 #if DEBUG
@@ -590,7 +617,7 @@ int main(void)
             }
         }
 
-        if (option.read()) {
+        if (option_pressed) {
             smoothing_enabled = !smoothing_enabled;
             switch (curr_input) {
             case CVBS:
