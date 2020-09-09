@@ -771,6 +771,7 @@ int main(void)
             // happened in the meanwhile.
             check_once_more = got_interrupt;
         }
+        _delay_ms(10);
     }
 
     I2c_HW.deinit();
