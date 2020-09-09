@@ -127,11 +127,14 @@ namespace koryuu_settings {
                         crc::crc32(&settings, checksum_ofs);
                     if (checksum != checksum_expected)
                         valid = false;
-
-                    // Set the checksum of the in-memory struct
-                    // in case it had a different, while
-                    // read-compatible layout.
-                    settings.checksum = checksum_expected;
+                    if (checksum_ofs != offsetof(decltype(settings), checksum))
+                    {
+                        // Set the checksum of the in-memory struct
+                        // in case it had a different, while
+                        // read-compatible layout.
+                        settings.checksum = checksum_expected;
+                        dirty = true;
+                    }
                 }
             }
 
