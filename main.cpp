@@ -580,6 +580,20 @@ int main(void)
                 << (smoothing_enabled ? _T("on") : _T("off")) << _T("\r\n\r\n");
 #endif
             settings.write();
+
+            // Flash the LEDs to signal the user.
+            led_CVBS = true;
+            led_YC = true;
+            led_OPT = true;
+            for (uint8_t i = 0; i < 5; ++i) {
+                _delay_ms(100);
+                led_CVBS = !led_CVBS;
+                led_YC = !led_YC;
+                led_OPT = !led_OPT;
+            }
+            led_CVBS = input_to_phys[curr_input] == INPUT_CVBS;
+            led_YC = input_to_phys[curr_input] == INPUT_SVIDEO;
+            led_OPT = !!settings.settings.smoothing;
             input_change_pressed = option_pressed = false;
         }
 
