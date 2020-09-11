@@ -124,7 +124,7 @@ namespace koryuu_settings {
 
                 if (valid) {
                     uint32_t checksum_expected =
-                        crc::crc32(&settings, checksum_ofs);
+                        crc::crc32(&s_u[0], checksum_ofs);
                     if (checksum != checksum_expected)
                         valid = false;
                     if (checksum_ofs != offsetof(decltype(settings), checksum))
