@@ -153,6 +153,25 @@ namespace koryuu_settings {
                 settings.padding = 0x00;
                 dirty = true;
             }
+            else {
+                // Validate known fields.
+                if (settings.default_input > SVIDEO_PEDESTAL) {
+                    settings.default_input = CVBS;
+                    dirty = true;
+                }
+                if (settings.smoothing > 0x01) {
+                    settings.smoothing = 0x00;
+                    dirty = true;
+                }
+                if (settings.disable_free_run > 0x01) {
+                    settings.disable_free_run = 0x00;
+                    dirty = true;
+                }
+                if (settings.padding != 0x00) {
+                    settings.padding = 0x00;
+                    dirty = true;
+                }
+            }
         }
 
         YAAL_INLINE("KoryuuSettings::is_dirty()")
