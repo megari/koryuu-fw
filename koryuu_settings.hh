@@ -14,7 +14,8 @@ namespace koryuu_settings {
 
     constexpr char SETTINGS_MAGIC[8] =
         { 'K', 'R', 'Y', 'U', 'C', 'O', 'N', 'S' };
-    constexpr uint16_t CURR_VERSION = 0x0001;
+    constexpr uint16_t CURR_VERSION = 0x0002;
+    constexpr uint16_t MIN_READ_VERSION = 0x0001;
 
     enum Input : uint8_t {
         CVBS = 0,
@@ -59,7 +60,8 @@ namespace koryuu_settings {
         SettingsHeader hdr;
         Input default_input;
         uint8_t smoothing;
-        uint8_t padding[2];
+        uint8_t disable_free_run;
+        uint8_t padding;
         uint32_t checksum;
     } __attribute__((packed));
     static_assert(sizeof(ConvSettings) == 28, "ConvSettings size is wrong!");
@@ -86,7 +88,7 @@ namespace koryuu_settings {
                 }
 
             if (valid && CURR_VERSION < tmp_hdr.min_read_version)
-                    valid = false;
+                valid = false;
 
             if (valid) {
                 uint32_t hdr_checksum =
@@ -144,10 +146,11 @@ namespace koryuu_settings {
                     SETTINGS_MAGIC, sizeof(SETTINGS_MAGIC));
                 settings.hdr.length = sizeof(settings);
                 settings.hdr.version = CURR_VERSION;
-                settings.hdr.min_read_version = CURR_VERSION;
+                settings.hdr.min_read_version = MIN_READ_VERSION;
                 settings.default_input = CVBS;
                 settings.smoothing = 0x00;
-                memset(&settings.padding, 0x00, sizeof(settings.padding));
+                settings.disable_free_run = 0x00;
+                settings.padding = 0x00;
                 dirty = true;
             }
         }
@@ -166,7 +169,7 @@ namespace koryuu_settings {
             if (dirty) {
                 settings.hdr.length = sizeof(settings);
                 settings.hdr.version = CURR_VERSION;
-                settings.hdr.min_read_version = CURR_VERSION;
+                settings.hdr.min_read_version = MIN_READ_VERSION;
                 settings.hdr.checksum =
                     crc::crc32(&settings.hdr,
                         offsetof(decltype(settings.hdr), checksum));
