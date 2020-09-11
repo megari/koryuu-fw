@@ -110,6 +110,14 @@ static void i2c_err_func(uint8_t addr, uint8_t arg_count)
 
 bool smoothing_enabled = false;
 
+enum : uint8_t {
+    FREERUN_STATUS_UNKNOWN = 0,
+    FREERUN_STATUS_RUNNING_FREE = 1,
+    FREERUN_STATUS_LOCKED = 2,
+} freerun_status = FREERUN_STATUS_UNKNOWN;
+
+bool disable_freerun = false;
+
 koryuu::DebouncedButton<PortD5> input_change;
 koryuu::DebouncedButton<PortB7> option;
 
@@ -321,8 +329,14 @@ static void setup_video(PhysInput input, bool pedestal, bool smoothing)
         decoder.select_autodetection(AD_PALBGHID_NTSCJ_SECAM);
 
     // Output control
-    // Enable output drivers, enable VBI
-    decoder.set_output_control(false, true);
+    if (disable_freerun && freerun_status != FREERUN_STATUS_LOCKED) {
+        // Tristate output drivers, enable VBI
+        decoder.set_output_control(true, true);
+    }
+    else {
+        // Enable output drivers, enable VBI
+        decoder.set_output_control(false, true);
+    }
 
     // Extended output control
     // Output full range, enable SFL, blank chroma during VBI, ITU BT.656-4
@@ -529,6 +543,7 @@ int main(void)
     }
 
     curr_input = settings.settings.default_input;
+    disable_freerun = !!settings.settings.disable_free_run;
     setup_video(input_to_phys[curr_input],
         input_to_pedestal[curr_input], !!settings.settings.smoothing);
     led_CVBS = input_to_phys[curr_input] == INPUT_CVBS;
@@ -544,6 +559,8 @@ int main(void)
             << asdec(input_to_pedestal[curr_input]) << _T("\r\n");
         serial << _T("\tSmoothing: ")
             << asdec(!!settings.settings.smoothing) << _T("\r\n");
+        serial << _T("\tFree run mode disabled: ")
+            << asdec(!!settings.settings.disable_free_run) << _T("\r\n");
 #endif
 
     // Main loop.
@@ -563,6 +580,8 @@ int main(void)
             // Save current settings to EEPROM.
             settings.settings.default_input = curr_input;
             settings.settings.smoothing = smoothing_enabled ? 0x01 : 0x00;
+            settings.settings.disable_free_run =
+                disable_freerun ? 0x01 : 0x00;
             settings.set_dirty();
 #if DEBUG
             serial << _T("Writing settings to EEPROM:\r\n");
@@ -577,7 +596,10 @@ int main(void)
                 _T("INVALID"));
             serial << input_str << _T("\r\n");
             serial << _T("\tSmoothing: ")
-                << (smoothing_enabled ? _T("on") : _T("off")) << _T("\r\n\r\n");
+                << (smoothing_enabled ? _T("on") : _T("off")) << _T("\r\n");
+            serial << _T("\tDisable freerun mode: ")
+                << (disable_freerun ? _T("yes") : _T("no")) << _T("\r\n\r\n");
+
 #endif
             settings.write();
 
@@ -612,6 +634,7 @@ int main(void)
                 serial << _T("Transition: CVBS_PEDESTAL -> SVIDEO\r\n");
 #endif
                 interlace_status = INTERLACE_STATUS_UNKNOWN;
+                freerun_status = FREERUN_STATUS_UNKNOWN;
                 setup_video(INPUT_SVIDEO, false, false);
                 curr_input = SVIDEO;
                 led_CVBS = false;
@@ -629,6 +652,7 @@ int main(void)
                 serial << _T("Transition: SVIDEO_PEDESTAL -> CVBS\r\n");
 #endif
                 interlace_status = INTERLACE_STATUS_UNKNOWN;
+                freerun_status = FREERUN_STATUS_UNKNOWN;
                 setup_video(INPUT_CVBS, false, false);
                 curr_input = CVBS;
                 led_CVBS = true;
@@ -655,7 +679,9 @@ int main(void)
         got_interrupt = !decoder.intrq;
 
         if (got_interrupt || check_once_more ||
-            interlace_status == INTERLACE_STATUS_UNKNOWN) {
+            interlace_status == INTERLACE_STATUS_UNKNOWN ||
+            freerun_status == FREERUN_STATUS_UNKNOWN)
+        {
 #if DEBUG > 1
             if (got_interrupt) {
                 serial << _T("Interrupt\r\n");
@@ -793,6 +819,17 @@ int main(void)
             }
             dec_status3 = new_status3;
             bool ilace_flag = !!(dec_status3 & 0x40);
+            bool freerun_flag = !!(dec_status3 & 0x10);
+            if (freerun_flag !=
+                (freerun_status == FREERUN_STATUS_RUNNING_FREE) ||
+                freerun_status == FREERUN_STATUS_UNKNOWN)
+            {
+                if (disable_freerun)
+                    decoder.set_output_control(freerun_flag, true);
+                freerun_status = freerun_flag ?
+                    FREERUN_STATUS_RUNNING_FREE :
+                    FREERUN_STATUS_LOCKED;
+            }
             if (ilace_flag && interlace_status != INTERLACE_STATUS_INTERLACED) {
                 interlace_status = INTERLACE_STATUS_INTERLACED;
                 setup_encoder();
