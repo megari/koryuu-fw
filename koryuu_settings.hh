@@ -11,6 +11,9 @@
 
 namespace koryuu_settings {
     using yaal::autounion;
+    using yaal::internal::enable_if_t;
+    using yaal::internal::typeof_t;
+#define typeof_(expr) typeof_t<decltype(expr)>
 
     constexpr char SETTINGS_MAGIC[8] =
         { 'K', 'R', 'Y', 'U', 'C', 'O', 'N', 'S' };
@@ -78,7 +81,7 @@ namespace koryuu_settings {
                 : // settings({ { { '\0' }, 0, 0, 0 }, 0, 0, 0 }),
                 eeprom_settings(eep_s), dirty(false)
         {
-            SettingsHeader tmp_hdr;
+            SettingsHeader &tmp_hdr = settings.hdr;
             bool valid = true;
             eeprom_read_block(&tmp_hdr, eep_s, sizeof(tmp_hdr));
             for (uint8_t i = 0; i < sizeof(SETTINGS_MAGIC); ++i)
@@ -92,8 +95,7 @@ namespace koryuu_settings {
 
             if (valid) {
                 uint32_t hdr_checksum =
-                    crc::crc32(&tmp_hdr,
-                        offsetof(decltype(tmp_hdr), checksum));
+                    crc::crc32(&tmp_hdr, offsetof(typeof_(tmp_hdr), checksum));
                 if (hdr_checksum != tmp_hdr.checksum)
                     valid = false;
             }
@@ -111,7 +113,7 @@ namespace koryuu_settings {
 
                 if (valid && tmp_hdr.length == sizeof(ConvSettings)) {
                     settings = s_u;
-                    checksum_ofs = offsetof(decltype(settings), checksum);
+                    checksum_ofs = offsetof(typeof_(settings), checksum);
                     checksum = settings.checksum;
                 }
                 else if (valid) {
@@ -129,8 +131,7 @@ namespace koryuu_settings {
                         crc::crc32(&s_u[0], checksum_ofs);
                     if (checksum != checksum_expected)
                         valid = false;
-                    if (checksum_ofs != offsetof(decltype(settings), checksum))
-                    {
+                    if (checksum_ofs != offsetof(typeof_(settings), checksum)) {
                         // Set the checksum of the in-memory struct
                         // in case it had a different, while
                         // read-compatible layout.
@@ -191,16 +192,19 @@ namespace koryuu_settings {
                 settings.hdr.min_read_version = MIN_READ_VERSION;
                 settings.hdr.checksum =
                     crc::crc32(&settings.hdr,
-                        offsetof(decltype(settings.hdr), checksum));
+                        offsetof(typeof_(settings.hdr), checksum));
                 settings.checksum =
                     crc::crc32(&settings,
-                        offsetof(decltype(settings), checksum));
+                        offsetof(typeof_(settings), checksum));
                 eeprom_update_block(&settings,
                     eeprom_settings, sizeof(settings));
                 dirty = false;
             }
         }
     };
+#ifdef typeof_
+#undef typeof_
+#endif
 }
 #endif // __YAAL__
 #endif // KORYUU_SETTINGS_HH
