@@ -1,0 +1,64 @@
+Changelog for the Koryuu firmware
+=================================
+
+Version 1.1-test0
+-----------------
+  Notes:
+    - A public test version. May have bugs.
+    - Asking for community feedback, especially regarding the NTSC
+      interlaced mode field reversal issue some users were
+      experiencing.
+
+  Fixes:
+    - Improved power-up sequence for the video chips.
+    - Made transitions between interlaced and progressive modes more
+      robust. The OSSC getting confused by Koryuu's output should no
+      longer happen, as long as the OSSC firmware version is
+      up-to-date (tested with OSSC firmware version 0.86).
+    - Hopefully fixed field reversal in NTSC interlaced mode.
+      - Feedback from those suffering from this problem with the
+        release firmware is more than welcome.
+
+  Not yet fixed:
+    - The smoothing is still ugly, thus not very usable. :(
+
+  General improvements:
+    - Code cleanups and refactoring with no user-visible functional
+      change.
+
+  New features:
+    - Separate firmware image (with the "_ntp" suffix), which disables
+      video output when no input is detected.
+    - Settings can now be saved and are automatically restored on
+      power-up.
+      - Uses the on-chip EEPROM.
+      - Checksummed and versioned to allow firmware updates without
+        losing current settings.
+      - Saved settings:
+        - Default input (Composite/S-Video)
+	- Default input pedestal setting (on/off, corresponding to
+          NTSC-M/J)
+        - Smoothing (on/off)
+        - Disable output when no input is detected (on/off)
+          - Off by default (test pattern shown when no input).
+          - Currently, changing this setting is not exposed, except
+            by a separate firmware image with the _ntp suffix, which
+            always disables output when no input is detected.
+      - To save current settings, press the INPUT_CHANGE and OPT
+        buttons simultaneously.
+        - This is a bit timing-sensitive, which has been mitigated by
+          requiring the buttons to be pressed a bit longer than before,
+          but this requires careful balancing, as making the buttons
+          any "laggier" may make the buttons feel unresponsive in other
+          contexts. Any feedback regarding the "feel" of the buttons is
+          welcome.
+        - After hitting the button combo successfully, LEDs flash a few
+          times.
+        - On failure to hit the button combo, the input/pedestal
+          setting and/or the smoothing setting changes, as if one or
+          both of the buttons had been hit separately.
+
+Version 1.0
+-----------
+  Notes:
+    - Initial release. Release firmware for the Koryuu.
