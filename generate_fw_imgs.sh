@@ -1,7 +1,7 @@
 #!/bin/sh
 
 FW_PREFIX="koryuu-fw"
-TARGETS="hex debug debug2 no_panic no_autoreset"
+TARGETS="hex hex_ntp debug debug_ntp debug2 debug2_ntp no_panic no_autoreset"
 ARCHIVE_NAME="${FW_PREFIX}_images.zip"
 HEX_TARGETS=""
 
@@ -18,7 +18,8 @@ done
 COMPRESS="${SEVENZIP} a -bb1 -tzip -mx=9 ${ARCHIVE_NAME}"
 
 for target in ${TARGETS}; do
-	[ "x${target}" = "xhex" ] && target=default
+	[ "x${target}" = "xhex" ] && target="default"
+	[ "x${target}" = "xhex_ntp" ] && target="ntp"
 	HEX_TARGETS="${HEX_TARGETS} ${FW_PREFIX}_${target}.hex"
 done
 
@@ -27,7 +28,8 @@ rm -f ${HEX_TARGETS} "${ARCHIVE_NAME}"
 # Ugly repetition of the HEX_TARGETS logic... ideas anyone?
 for target in ${TARGETS}; do
 	make "build_${target}" || exit 1
-	[ "x${target}" = "xhex" ] && target=default
+	[ "x${target}" = "xhex" ] && target="default"
+	[ "x${target}" = "xhex_ntp" ] && target="ntp"
 	mv "${FW_PREFIX}.hex" "${FW_PREFIX}_${target}.hex" || exit 1
 done
 

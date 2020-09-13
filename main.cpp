@@ -30,6 +30,9 @@
 #ifndef ERROR_PANIC
     #define ERROR_PANIC 1
 #endif
+#ifndef DEC_TEST_PATTERN
+    #define DEC_TEST_PATTERN 1
+#endif
 
 // There is no sense in enabling autoreset if panic is disabled
 #if ERROR_PANIC == 0
@@ -329,7 +332,9 @@ static void setup_video(PhysInput input, bool pedestal, bool smoothing)
         decoder.select_autodetection(AD_PALBGHID_NTSCJ_SECAM);
 
     // Output control
-    if (disable_freerun && freerun_status != FREERUN_STATUS_LOCKED) {
+    if ((!DEC_TEST_PATTERN || disable_freerun) &&
+        freerun_status != FREERUN_STATUS_LOCKED)
+    {
         // Tristate output drivers, enable VBI
         decoder.set_output_control(true, true);
     }
@@ -824,7 +829,7 @@ int main(void)
                 (freerun_status == FREERUN_STATUS_RUNNING_FREE) ||
                 freerun_status == FREERUN_STATUS_UNKNOWN)
             {
-                if (disable_freerun)
+                if (!DEC_TEST_PATTERN || disable_freerun)
                     decoder.set_output_control(freerun_flag, true);
                 freerun_status = freerun_flag ?
                     FREERUN_STATUS_RUNNING_FREE :
