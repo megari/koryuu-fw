@@ -81,6 +81,7 @@ namespace koryuu_settings {
                 : // settings({ { { '\0' }, 0, 0, 0 }, 0, 0, 0 }),
                 eeprom_settings(eep_s), dirty(false)
         {
+            static autounion<ConvSettings, true, 2 * sizeof(ConvSettings)> s_u;
             SettingsHeader &tmp_hdr = settings.hdr;
             bool valid = true;
             eeprom_read_block(&tmp_hdr, eep_s, sizeof(tmp_hdr));
@@ -103,7 +104,6 @@ namespace koryuu_settings {
             if (valid) {
                 uint32_t checksum;
                 size_t checksum_ofs;
-                autounion<ConvSettings, true, 2 * sizeof(ConvSettings)> s_u;
 
                 // Check for ridiculous length
                 if (tmp_hdr.length > 2 * sizeof(ConvSettings))
@@ -202,6 +202,7 @@ namespace koryuu_settings {
             }
         }
     };
+
 #ifdef typeof_
 #undef typeof_
 #endif
