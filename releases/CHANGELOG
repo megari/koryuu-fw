@@ -42,8 +42,7 @@ Version 1.1-test0
         - Disable output when no input is detected (on/off)
           - Off by default (test pattern shown when no input).
           - Currently, changing this setting is not exposed, except
-            by a separate firmware image with the _ntp suffix, which
-            always disables output when no input is detected.
+            by the separate firmware image.
       - To save current settings, press the INPUT_CHANGE and OPT
         buttons simultaneously.
         - This is a bit timing-sensitive, which has been mitigated by
