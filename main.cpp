@@ -667,6 +667,37 @@ int main(void)
         }
 
         if (option_pressed) {
+            uint8_t old_0c = I2C_READ_ONE(decoder.address, 0x0c);
+            uint8_t old_0d = I2C_READ_ONE(decoder.address, 0x0d);
+            uint8_t old_14 = I2C_READ_ONE(decoder.address, 0x14);
+
+            constexpr uint8_t Y_black = 0x00u;
+            constexpr uint8_t Y_white = 0x3fu << 2u;
+            constexpr uint8_t Pb = 0x08u; // Halfway of range
+            constexpr uint8_t Pr = 0x08u; // Halfway of range
+            constexpr uint8_t Chroma = (Pr << 4u) | (Pb & 0x0fu);
+
+            // Force free run mode.
+            // Set free run pattern to a single color.
+            // Start with black.
+            I2C_WRITE(decoder.address, 0x0c, Y_black | 0x03u);
+            I2C_WRITE(decoder.address, 0x0d, Chroma); // Pb and Pr to 0
+            decoder.set_vs_mode_control(true, true, COAST_MODE_576I);
+            I2C_WRITE(decoder.address, 0x14, 0x10);
+
+            for (uint16_t count = 0; count < 256; ++count) {
+                _delay_ms(51);
+                I2C_WRITE(decoder.address, 0x0c,
+                    (count & 0x0001u) ? (Y_white | 0x03u) : (Y_black | 0x03u));
+                I2C_WRITE(decoder.address, 0x0d, Chroma);
+            }
+
+            // Restore old values.
+            I2C_WRITE(decoder.address, 0x0c, old_0c);
+            I2C_WRITE(decoder.address, 0x0d, old_0d);
+            decoder.set_vs_mode_control(true, true, COAST_MODE_480I);
+            I2C_WRITE(decoder.address, 0x14, old_14);
+#if 0
             smoothing_enabled = !smoothing_enabled;
             switch (curr_input) {
             case CVBS:
@@ -679,6 +710,9 @@ int main(void)
                 break;
             }
             led_OPT = smoothing_enabled;
+#else
+
+#endif
         }
 
         got_interrupt = !decoder.intrq;
