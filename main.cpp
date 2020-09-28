@@ -142,13 +142,13 @@ static void setup_timer0()
     TIMSK0 = _BV(OCIE0A);
 }
 
-static void setup_encoder()
+static void setup_encoder(uint8_t reset = false)
 {
-#if 0
-    // Software reset. Ignore the I2C transaction failure.
-    I2C_WRITE<false>(encoder.address, 0x17, 0x02);
-    _delay_ms(1);
-#endif
+    if (reset) {
+        // Software reset. Ignore the I2C transaction failure.
+        I2C_WRITE<false>(encoder.address, 0x17, 0x02);
+        _delay_ms(1);
+    }
 #if 0
     // All DACs and PLL enabled
     I2C_WRITE(encoder.address, 0x00, 0x1c);
@@ -667,6 +667,10 @@ int main(void)
         }
 
         if (option_pressed) {
+            static uint8_t pushcount = 0;
+#if DEBUG
+            serial << _T("Push count is ") << asdec(pushcount ) << _T("\r\n");
+#endif // DEBUG
             uint8_t old_0c = I2C_READ_ONE(decoder.address, 0x0c);
             uint8_t old_0d = I2C_READ_ONE(decoder.address, 0x0d);
             uint8_t old_14 = I2C_READ_ONE(decoder.address, 0x14);
@@ -684,9 +688,36 @@ int main(void)
             I2C_WRITE(decoder.address, 0x0d, Chroma); // Pb and Pr to 0
             decoder.set_vs_mode_control(true, true, COAST_MODE_576I);
             I2C_WRITE(decoder.address, 0x14, 0x10);
+            setup_encoder(true);
 
-            for (uint16_t count = 0; count < 256; ++count) {
-                _delay_ms(51);
+            for (uint16_t count = 0; count < 64; ++count) {
+                switch(pushcount & 0x07u) {
+                case 0x00u:
+                    _delay_ms(19);
+                    break;
+                case 0x01u:
+                    _delay_ms(37);
+                    break;
+                case 0x02u:
+                    _delay_ms(59);
+                    break;
+                case 0x03u:
+                    _delay_ms(73);
+                    break;
+                case 0x04u:
+                    _delay_ms(101);
+                    break;
+                case 0x05u:
+                    _delay_ms(127);
+                    break;
+                case 0x06u:
+                    _delay_ms(173);
+                    break;
+                case 0x07u:
+                    _delay_ms(337);
+                    break;
+                }
+                //_delay_ms(190);
                 I2C_WRITE(decoder.address, 0x0c,
                     (count & 0x0001u) ? (Y_white | 0x03u) : (Y_black | 0x03u));
                 I2C_WRITE(decoder.address, 0x0d, Chroma);
@@ -697,6 +728,8 @@ int main(void)
             I2C_WRITE(decoder.address, 0x0d, old_0d);
             decoder.set_vs_mode_control(true, true, COAST_MODE_480I);
             I2C_WRITE(decoder.address, 0x14, old_14);
+            setup_encoder(true);
+            ++pushcount;
 #if 0
             smoothing_enabled = !smoothing_enabled;
             switch (curr_input) {
