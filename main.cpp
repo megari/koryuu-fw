@@ -678,64 +678,33 @@ int main(void)
 #if DEBUG
             serial << _T("Push count is ") << asdec(pushcount ) << _T("\r\n");
 #endif // DEBUG
-            uint8_t old_0c = I2C_READ_ONE(decoder.address, 0x0c);
-            uint8_t old_0d = I2C_READ_ONE(decoder.address, 0x0d);
-            uint8_t old_14 = I2C_READ_ONE(decoder.address, 0x14);
+            constexpr register uint8_t default_0c = 0x36u; // ADI default
+            constexpr register uint8_t default_0d = 0x7cu; // ADI default
+            constexpr register uint8_t default_14 = 0x11u; // Koryuu default
 
-            constexpr uint8_t Y_black = 0x00u;
-            constexpr uint8_t Y_white = 0x3fu << 2u;
-            constexpr uint8_t Pb = 0x08u; // Halfway of range
-            constexpr uint8_t Pr = 0x08u; // Halfway of range
-            constexpr uint8_t Chroma = (Pr << 4u) | (Pb & 0x0fu);
+            //constexpr register uint8_t Y_black = 0x00u;
+            constexpr register uint8_t Y_white = 0x3fu << 2u;
+            constexpr register uint8_t Pb = 0x08u; // Halfway of range
+            constexpr register uint8_t Pr = 0x08u; // Halfway of range
+            constexpr register uint8_t Chroma = (Pr << 4u) | (Pb & 0x0fu);
 
-            // Force free run mode.
-            // Set free run pattern to a single color.
-            // Start with black.
-            I2C_WRITE(decoder.address, 0x0c, Y_black | 0x03u);
-            I2C_WRITE(decoder.address, 0x0d, Chroma); // Pb and Pr to 0
-            decoder.set_vs_mode_control(true, true, COAST_MODE_576I);
-            I2C_WRITE(decoder.address, 0x14, 0x10);
-            setup_encoder(true);
-
-            for (uint16_t count = 0; count < 64; ++count) {
-                switch(pushcount & 0x07u) {
-                case 0x00u:
-                    _delay_ms(19);
-                    break;
-                case 0x01u:
-                    _delay_ms(37);
-                    break;
-                case 0x02u:
-                    _delay_ms(59);
-                    break;
-                case 0x03u:
-                    _delay_ms(73);
-                    break;
-                case 0x04u:
-                    _delay_ms(101);
-                    break;
-                case 0x05u:
-                    _delay_ms(127);
-                    break;
-                case 0x06u:
-                    _delay_ms(173);
-                    break;
-                case 0x07u:
-                    _delay_ms(337);
-                    break;
-                }
-                //_delay_ms(190);
-                I2C_WRITE(decoder.address, 0x0c,
-                    (count & 0x0001u) ? (Y_white | 0x03u) : (Y_black | 0x03u));
-                I2C_WRITE(decoder.address, 0x0d, Chroma);
+            if (!(pushcount & 0x01u)) {
+                // Force free run mode.
+                // Set free run pattern to a single color (white).
+                I2C_WRITE(decoder.address, 0x0c, Y_white | 0x03u);
+                I2C_WRITE(decoder.address, 0x0d, Chroma); // Pb and Pr to 0
+                decoder.set_vs_mode_control(true, true, COAST_MODE_576I);
+                I2C_WRITE(decoder.address, 0x14, 0x10);
+                setup_encoder();
             }
-
-            // Restore old values.
-            I2C_WRITE(decoder.address, 0x0c, old_0c);
-            I2C_WRITE(decoder.address, 0x0d, old_0d);
-            decoder.set_vs_mode_control(true, true, COAST_MODE_480I);
-            I2C_WRITE(decoder.address, 0x14, old_14);
-            setup_encoder(true);
+            else {
+                // Restore old values.
+                I2C_WRITE(decoder.address, 0x0c, default_0c);
+                I2C_WRITE(decoder.address, 0x0d, default_0d);
+                decoder.set_vs_mode_control(true, true, COAST_MODE_480I);
+                I2C_WRITE(decoder.address, 0x14, default_14);
+                setup_encoder();
+            }
             ++pushcount;
 #if 0
             smoothing_enabled = !smoothing_enabled;
