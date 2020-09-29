@@ -571,8 +571,14 @@ int main(void)
 
     // Main loop.
     // Reads the switch status, decoder interrupt line and the status registers.
-#if DEBUG
     uint8_t dec_status1 = 0x00;
+
+    // The current video standard detected by the decoder.
+    // This initial value is intentionally invalid.
+    // Only the 3 LSBs matter, all others are zero for valid standards.
+    uint8_t dec_vstd = 0xffu;
+
+#if DEBUG
     uint8_t dec_status2 = 0x00;
 #endif
     uint8_t dec_status3 = 0x00;
@@ -781,15 +787,19 @@ int main(void)
             }
 #endif // DEBUG > 1
 
+            const uint8_t new_status1 = I2C_READ_ONE(decoder.address, 0x10);
 #if DEBUG
-            uint8_t new_status1 = I2C_READ_ONE(decoder.address, 0x10);
-            uint8_t new_status2 = I2C_READ_ONE(decoder.address, 0x12);
+            const uint8_t new_status2 = I2C_READ_ONE(decoder.address, 0x12);
 #endif
+            const uint8_t new_status3 = I2C_READ_ONE(decoder.address, 0x13);
+            uint8_t encoder_setup_needed = false;
 
-            uint8_t new_status3 = I2C_READ_ONE(decoder.address, 0x13);
-
-#if DEBUG
             if (new_status1 != dec_status1) {
+                const uint8_t new_vstd = (new_status1 >> 4u) & 0x07u;
+
+                if (dec_vstd != 0xffu)
+                    dec_vstd = (dec_status1 >> 4u) & 0x07u;
+#if DEBUG
                 serial << _T("Status 1 changed:\r\n");
                 serial << _T("In lock: ") << asdec(new_status1 & 0x01)
                     << _T("\r\n");
@@ -800,7 +810,7 @@ int main(void)
                 serial << _T("Follow PW: ") << asdec(!!(new_status1 & 0x08))
                     << _T("\r\n");
                 serial << _T("Video standard: ");
-                switch ((new_status1 >> 4) & 0x07) {
+                switch (new_vstd) {
                 case 0x00:
                     serial << _T("NTSC M/J\r\n");
                     break;
@@ -849,9 +859,15 @@ int main(void)
 #endif
 
                 serial << _T("\r\n");
+#endif // DEBUG
+                if ((dec_vstd == 0xffu) || (new_vstd != dec_vstd)) {
+                    dec_vstd = new_vstd;
+                    encoder_setup_needed = true;
+                }
             }
             dec_status1 = new_status1;
 
+#if DEBUG
             if (new_status2 != dec_status2) {
                 serial << _T("Status 2 changed:\r\n");
                 serial << _T("Macrovision color striping detected: ")
@@ -905,14 +921,17 @@ int main(void)
             }
             if (ilace_flag && interlace_status != INTERLACE_STATUS_INTERLACED) {
                 interlace_status = INTERLACE_STATUS_INTERLACED;
-                setup_encoder();
+                encoder_setup_needed = true;
             }
             else if (!ilace_flag &&
                 interlace_status != INTERLACE_STATUS_PROGRESSIVE)
             {
                 interlace_status = INTERLACE_STATUS_PROGRESSIVE;
-                setup_encoder();
+                encoder_setup_needed = true;
             }
+
+            if (encoder_setup_needed)
+                setup_encoder();
 
             // Clear all interrupt flags...
             if (got_interrupt) {
