@@ -181,12 +181,13 @@ static void setup_encoder()
     // XXX: This will override the blanking bit in EAV/SAV!
     I2C_WRITE(encoder.address, 0x83, 0x14);
 #else
+    // Use defaults:
     // No SD pedestal YPrPb
     // SD output level for Y: 700mV/300mV
-    // SD output level for PrPb: PAL 700mV, NTSC 1000mV
+    // SD output level for PrPb: 700mV
     // SD VBI disabled
     // SD closed captioning disabled
-    I2C_WRITE(encoder.address, 0x83, 0x00);
+    I2C_WRITE(encoder.address, 0x83, 0x04);
 #endif
 
     // Enable subcarrier frequency lock
