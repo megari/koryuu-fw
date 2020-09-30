@@ -17,8 +17,8 @@ namespace koryuu_settings {
 
     constexpr char SETTINGS_MAGIC[8] =
         { 'K', 'R', 'Y', 'U', 'C', 'O', 'N', 'S' };
-    constexpr uint16_t CURR_VERSION = 0x0002;
-    constexpr uint16_t MIN_READ_VERSION = 0x0001;
+    constexpr uint16_t CURR_VERSION = 0x0002u;
+    constexpr uint16_t MIN_READ_VERSION = 0x0001u;
 
     enum Input : uint8_t {
         CVBS = 0,
@@ -46,9 +46,7 @@ namespace koryuu_settings {
         [SVIDEO_PEDESTAL] = true,
     };
 
-    // The layout of this struct must remain compatible!
-    // This means that the any changes to the layout can
-    // only be done past the field min_read_version.
+    // The layout of this struct must not change!
     struct SettingsHeader {
         char magic[8];
         uint32_t length;
@@ -78,11 +76,12 @@ namespace koryuu_settings {
 
     public:
         KoryuuSettings(/* EEMEM */ ConvSettings *const eep_s)
-                : // settings({ { { '\0' }, 0, 0, 0 }, 0, 0, 0 }),
-                eeprom_settings(eep_s), dirty(false)
+                : eeprom_settings(eep_s), dirty(false)
         {
             static autounion<ConvSettings, true, 2 * sizeof(ConvSettings)> s_u;
             SettingsHeader &tmp_hdr = settings.hdr;
+            static constexpr size_t def_checksum_ofs =
+                offsetof(typeof_(settings), checksum);
             bool valid = true;
             eeprom_read_block(&tmp_hdr, eep_s, sizeof(tmp_hdr));
             for (uint8_t i = 0; i < sizeof(SETTINGS_MAGIC); ++i)
@@ -113,7 +112,7 @@ namespace koryuu_settings {
 
                 if (valid && tmp_hdr.length == sizeof(ConvSettings)) {
                     settings = s_u;
-                    checksum_ofs = offsetof(typeof_(settings), checksum);
+                    checksum_ofs = def_checksum_ofs;
                     checksum = settings.checksum;
                 }
                 else if (valid) {
@@ -129,13 +128,15 @@ namespace koryuu_settings {
                 if (valid) {
                     uint32_t checksum_expected =
                         crc::crc32(&s_u[0], checksum_ofs);
-                    if (checksum != checksum_expected)
+                    if (checksum != checksum_expected) {
                         valid = false;
-                    if (checksum_ofs != offsetof(typeof_(settings), checksum)) {
-                        // Set the checksum of the in-memory struct
-                        // in case it had a different, while
-                        // read-compatible layout.
-                        settings.checksum = checksum_expected;
+                    }
+                    if (checksum_ofs != def_checksum_ofs) {
+                        // Re-calculate the checksum of the settings
+                        // struct read from the EEPROM if it had a
+                        // different, while read-compatible layout.
+                        settings.checksum =
+                            crc::crc32(&settings, def_checksum_ofs);
                         dirty = true;
                     }
                 }
@@ -149,9 +150,9 @@ namespace koryuu_settings {
                 settings.hdr.version = CURR_VERSION;
                 settings.hdr.min_read_version = MIN_READ_VERSION;
                 settings.default_input = CVBS;
-                settings.smoothing = 0x00;
-                settings.disable_free_run = 0x00;
-                settings.padding = 0x00;
+                settings.smoothing = 0x00u;
+                settings.disable_free_run = 0x00u;
+                settings.padding = 0x00u;
                 dirty = true;
             }
             else {
@@ -160,16 +161,16 @@ namespace koryuu_settings {
                     settings.default_input = CVBS;
                     dirty = true;
                 }
-                if (settings.smoothing > 0x01) {
-                    settings.smoothing = 0x00;
+                if (settings.smoothing > 0x01u) {
+                    settings.smoothing = 0x00u;
                     dirty = true;
                 }
-                if (settings.disable_free_run > 0x01) {
-                    settings.disable_free_run = 0x00;
+                if (settings.disable_free_run > 0x01u) {
+                    settings.disable_free_run = 0x00u;
                     dirty = true;
                 }
-                if (settings.padding != 0x00) {
-                    settings.padding = 0x00;
+                if (settings.padding != 0x00u) {
+                    settings.padding = 0x00u;
                     dirty = true;
                 }
             }
