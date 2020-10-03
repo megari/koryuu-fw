@@ -160,11 +160,11 @@ namespace ad_decoder {
             I2C_WRITE(address, 0x04, ext_outc);
         }
 
-        void set_power_management(bool powerdown, bool reset) {
+        void set_power_management(bool powerdown, bool do_reset) {
             uint8_t pwr_mgmt = 0x00;
             if (powerdown)
                 pwr_mgmt |= PWRM_PWRDWN;
-            if (reset)
+            if (do_reset)
                 pwr_mgmt |= PWRM_RESET;
 
             // An I2C failure is expected here, as the chip resets.
