@@ -115,7 +115,7 @@ namespace koryuu_settings {
                     eeprom_read_block(&s_u[0], eep_s, tmp_hdr.length);
 
                 if (valid && tmp_hdr.length == sizeof(ConvSettings)) {
-                    settings = s_u;
+                    settings = s_u.value();
                     checksum_ofs = def_checksum_ofs;
                     checksum = settings.checksum;
                 }
@@ -126,7 +126,7 @@ namespace koryuu_settings {
 
                     // This intentionally "slices" a read-compatible
                     // settings struct.
-                    settings = s_u;
+                    settings = s_u.value();
                 }
 
                 if (valid) {
