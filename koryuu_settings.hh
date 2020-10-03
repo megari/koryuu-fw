@@ -92,6 +92,10 @@ namespace koryuu_settings {
 
             if (valid && CURR_VERSION < tmp_hdr.min_read_version)
                 valid = false;
+            else if (valid && CURR_VERSION != tmp_hdr.version)
+                // Even if there are no changes needed to the data,
+                // we need to update the version fields on next write.
+                dirty = true;
 
             if (valid) {
                 uint32_t hdr_checksum =
