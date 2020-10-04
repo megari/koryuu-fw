@@ -15,6 +15,10 @@
 #include "debounce.hh"
 #include "koryuu_settings.hh"
 
+_T_DECL(FW_VERSION, "1.1-test0");
+__attribute__((used))
+static const auto& FW_VERSION = _T_REF(FW_VERSION);
+
 #ifndef DEBUG
     #define DEBUG 0
 #endif
@@ -532,7 +536,8 @@ int main(void)
 
     KoryuuSettings settings(&eeprom_settings);
 #if DEBUG
-    serial << _T("converter starting...\r\n");
+    serial << _T("Koryuu transcoder starting...\r\n");
+    serial << _T("Firmware version: ") << FW_VERSION << _T("\r\n");
     uint32_t settings_hdr_crc32 = settings.settings.hdr.checksum;
     uint32_t settings_crc32 = settings.settings.checksum;
     serial << _T("Settings hdr crc32: 0x") << ashex(settings_hdr_crc32)
