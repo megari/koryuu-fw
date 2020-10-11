@@ -404,6 +404,15 @@ namespace ad_decoder {
             I2C_WRITE(address, 0xf9, outc);
         }
 
+        void set_lock_count_properties(bool over_field, bool only_hlock)
+        {
+            uint8_t lockc = 0x24;
+            if (!over_field)
+                lockc |= 0x40;
+            if (!only_hlock)
+                lockc |= 0x80;
+            I2C_WRITE(address, 0x51, lockc);
+        }
     };
 }
 

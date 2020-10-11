@@ -299,6 +299,9 @@ static void setup_video(PhysInput input, bool pedestal, bool smoothing)
     decoder.set_power_management(false, false);
     _delay_ms(10);
 
+    // Evaluate lock over entire field(s), use hlock + f_{SC}lock.
+    decoder.set_lock_count_properties(true, false);
+
     // AFE IBIAS (undocumented register, used in recommended scripts)
     if (input == INPUT_CVBS) {
         I2C_WRITE(decoder.address, 0x52, 0xcd);
