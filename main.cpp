@@ -590,6 +590,10 @@ int main(void)
     uint8_t dec_status2 = 0x00;
 #endif
     uint8_t dec_status3 = 0x00;
+#if DEBUG
+    uint8_t loop_count = 0x00u;
+#endif
+    ColorKillThres ckill_thr = CK_THRESH_320;
     bool got_interrupt = false;
     bool check_once_more = true;
     while (1) {
@@ -682,6 +686,7 @@ int main(void)
         }
 
         if (option_pressed) {
+#if 0
             smoothing_enabled = !smoothing_enabled;
             switch (curr_input) {
             case CVBS:
@@ -694,7 +699,73 @@ int main(void)
                 break;
             }
             led_OPT = smoothing_enabled;
+#endif
+            uint16_t thresh_val;
+
+            switch(ckill_thr) {
+            case CK_THRESH_05:
+                ckill_thr = CK_THRESH_15;
+                thresh_val = 15;
+                break;
+            case CK_THRESH_15:
+                ckill_thr = CK_THRESH_25;
+                thresh_val = 25;
+                break;
+            case CK_THRESH_25:
+                ckill_thr = CK_THRESH_40;
+                thresh_val = 40;
+                break;
+            case CK_THRESH_40:
+                ckill_thr = CK_THRESH_85;
+                thresh_val = 85;
+                break;
+            case CK_THRESH_85:
+                ckill_thr = CK_THRESH_160;
+                thresh_val = 160;
+                break;
+            case CK_THRESH_160:
+                ckill_thr = CK_THRESH_320;
+                thresh_val = 320;
+                break;
+            case CK_THRESH_320:
+                ckill_thr = CK_THRESH_05;
+                thresh_val = 5;
+                break;
+            }
+#if DEBUG
+            serial << _T("Setting color kill threshold to ")
+                << asdec(thresh_val) << _T(" promilles\r\n\r\n");
+#endif
+            decoder.set_color_kill_threshold(ckill_thr);
         }
+
+#if DEBUG
+        if (!loop_count) {
+            const uint8_t agcm = I2C_READ_ONE(decoder.address, 0x2c);
+            const uint8_t cg1 = I2C_READ_ONE(decoder.address, 0x2d);
+            const uint8_t cg2 = I2C_READ_ONE(decoder.address, 0x2e);
+            const uint8_t lg1 = I2C_READ_ONE(decoder.address, 0x2f);
+            const uint8_t lg2 = I2C_READ_ONE(decoder.address, 0x30);
+
+            const uint16_t cg = ((cg1 & 0x000fu) << 8u) | ((uint16_t) cg2);
+            const uint16_t lg = ((lg1 & 0x000fu) << 8u) | ((uint16_t) lg2);
+
+            serial << _T("Chroma automatic gain control: ")
+                << asdec(agcm & 0x03u) << _T("\r\n");
+            serial << _T("Chroma automatic gain timing: ")
+                << asdec(cg1 >> 6u) << _T("\r\n");
+            serial << _T("Luma automatic gain control: ")
+                << asdec((agcm >> 4u) & 0x07u) << _T("\r\n");
+            serial << _T("Luma automatic gain timing: ")
+                << asdec(lg1 >> 6u) << _T("\r\n\r\n");
+
+            serial << _T("Chroma gain: ") << asdec(cg)
+                << _T(" (0x") << ashex(cg) << _T(")\r\n");
+            serial << _T("Luma gain: ") << asdec(lg)
+                << _T(" (0x") << ashex(lg) << _T(")\r\n\r\n");
+        }
+        ++loop_count;
+#endif
 
         got_interrupt = !decoder.intrq;
 
