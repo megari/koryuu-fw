@@ -81,6 +81,17 @@ namespace ad_decoder {
         // COAST_MODE_RESERVED = 0x0c,
     };
 
+    enum ColorKillThres : uint8_t {
+        CK_THRESH_05  = 0x00u << 4u, // NTSC, PAL: < 0.5%, SECAM: None
+        CK_THRESH_15  = 0x01u << 4u, // NTSC, PAL: < 1.5%, SECAM: < 5%
+        CK_THRESH_25  = 0x02u << 4u, // NTSC, PAL: < 2.5%, SECAM: < 7%
+        CK_THRESH_40  = 0x03u << 4u, // NTSC, PAL: < 4%, SECAM: < 8%
+        CK_THRESH_85  = 0x04u << 4u, // NTSC, PAL: < 8.5%, SECAM: < 9.5%
+        CK_THRESH_160 = 0x05u << 4u, // NTSC, PAL: < 16%, SECAM: < 15%
+        CK_THRESH_320 = 0x06u << 4u, // NTSC, PAL: < 32%, SECAM: < 32%
+        // CK_THRESH_RESERVED = 0x07u << 4u,
+    };
+
     constexpr uint8_t OUTC_TOD    = 0x40;
     constexpr uint8_t OUTC_VBI_EN = 0x80;
 
@@ -412,6 +423,12 @@ namespace ad_decoder {
             if (!only_hlock)
                 lockc |= 0x80;
             I2C_WRITE(address, 0x51, lockc);
+        }
+
+        void set_color_kill_threshold(ColorKillThres threshold)
+        {
+            const uint8_t ckill_thr = threshold | 0x02u;
+            I2C_WRITE(address, 0x3d, ckill_thr);
         }
     };
 }
