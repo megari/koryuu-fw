@@ -1,6 +1,41 @@
 Changelog for the Koryuu firmware
 =================================
 
+Version 1.1-test1
+-----------------
+    Notes:
+      - A public test version. May have bugs.
+      - Continuing to ask for community feedback, especially regarding the
+        following issues:
+        - NTSC interlaced mode field reversal issue (does it still occur?),
+        - Any problems with flickering color or color picture turning into
+          monochrome,
+        - Sync loss issues on bright flashes on screen.
+
+    Fixes:
+      - Reduced the maximum stack frame size (must not waste RAM)
+      - Properly track changes to input video standard, re-initialize the
+        encoder chip more thoroughly on change.
+      - Use 700mV output level both for both luma and chroma output, regardless
+        of input video standard.
+      - Improve handling of settings
+        - Better validation
+        - Improved forward compatibility
+        - Settings are now marked dirty when loading existing settings with a
+          different version, so that the settings are rewritten to EEPROM at
+          the first opportunity.
+
+    Not yet fixed:
+      - The smoothing continues to be ugly. :(
+
+    Other changes/improvements:
+      - The version of the firmware is now embedded in the firmware image.
+      - Some build fixes, partly courtesy of clang's stricter interpretation of
+        certain aspects of the C++14 standard than avr-g++.
+
+    New features:
+      - None. Hoping to stabilize for next official firmware version.
+
 Version 1.1-test0
 -----------------
   Notes:
