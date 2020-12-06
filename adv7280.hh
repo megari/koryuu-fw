@@ -90,6 +90,8 @@ namespace ad_decoder {
         SECAM     = 0x05,
         PAL_CN    = 0x06,
         SECAM_525 = 0x07,
+        LAST_VT   = SECAM_525,
+        INVALID_VT = 0xffu,
     };
 
     constexpr uint8_t OUTC_TOD    = 0x40;
