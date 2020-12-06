@@ -38,6 +38,10 @@ static const auto& FW_VERSION = _T_REF(FW_VERSION);
     #define DEC_TEST_PATTERN 1
 #endif
 
+#if ENC_TEST_PATTERN
+    #error "Encoder test pattern not yet supported in I2P builds!"
+#endif
+
 // There is no sense in enabling autoreset if panic is disabled
 #if ERROR_PANIC == 0
     #undef AUTORESET
