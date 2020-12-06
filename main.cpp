@@ -42,6 +42,11 @@ static const auto& FW_VERSION = _T_REF(FW_VERSION);
     #error "Encoder test pattern not yet supported in I2P builds!"
 #endif
 
+#define OPT_FUNCTION_SMOOTHING 0
+#define OPT_FUNCTION_DEINTERLACE 1
+
+#define OPT_FUNCTION OPT_FUNCTION_DEINTERLACE
+
 // There is no sense in enabling autoreset if panic is disabled
 #if ERROR_PANIC == 0
     #undef AUTORESET
@@ -730,6 +735,7 @@ int main(void)
         }
 
         if (option_pressed) {
+#if OPT_FUNCTION == OPT_FUNCTION_SMOOTHING
             smoothing_enabled = !smoothing_enabled;
             switch (curr_input) {
             case CVBS:
@@ -742,6 +748,17 @@ int main(void)
                 break;
             }
             led_OPT = smoothing_enabled;
+#else // if OPT_FUNCTION == OPT_FUNCTION_DEINTERLACE
+            deinterlace_status = !deinterlace_status;
+#if DEBUG
+            serial << _T("Changed deinterlace status to ")
+                << asdec(deinterlace_status) << _T("\r\n");
+#endif
+            setup_video(input_to_phys[curr_input],
+                input_to_pedestal[curr_input],
+                false, deinterlace_status);
+            led_OPT = deinterlace_status;
+#endif
         }
 
         got_interrupt = !decoder.intrq;
