@@ -1,6 +1,18 @@
 Changelog for the Koryuu firmware
 =================================
 
+Version 1.1-RC1
+---------------
+    Notes:
+      - First release candidate.
+      - Intended as the firmware the second Koryuu batch ships with.
+
+    Fixes:
+      - Do not automatically overwrite existing settings on EEPROM on startup
+        if they are from a newer firmware version.
+        - The user can still explicitly trigger the current settings to be
+          written by pressing the OPT and INPUT CHANGE buttons simultaneously.
+
 Version 1.1-test1
 -----------------
     Notes:
