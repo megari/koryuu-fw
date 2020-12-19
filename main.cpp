@@ -546,7 +546,9 @@ int main(void)
 #endif
 
     // If the settings were (re-)initialized, write them back to EEPROM.
-    if (settings.is_dirty()) {
+    // However, do not do this automatically if we loaded settings from
+    // a newer version.
+    if (settings.is_dirty() && !settings.is_downgrading()) {
 #if DEBUG
         serial << _T("EEPROM settings invalid, writing back defaults.\r\n");
 #endif

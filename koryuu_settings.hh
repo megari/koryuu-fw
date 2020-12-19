@@ -73,10 +73,11 @@ namespace koryuu_settings {
     private:
         /* EEMEM */ ConvSettings *const eeprom_settings;
         bool dirty;
+        bool downgrade;
 
     public:
         KoryuuSettings(/* EEMEM */ ConvSettings *const eep_s)
-                : eeprom_settings(eep_s), dirty(false)
+                : eeprom_settings(eep_s), dirty(false), downgrade(false)
         {
             static autounion<ConvSettings, true, 2 * sizeof(ConvSettings)> s_u;
             SettingsHeader &tmp_hdr = settings.hdr;
@@ -90,12 +91,20 @@ namespace koryuu_settings {
                     break;
                 }
 
-            if (valid && CURR_VERSION < tmp_hdr.min_read_version)
+            if (valid && CURR_VERSION < tmp_hdr.min_read_version) {
                 valid = false;
-            else if (valid && CURR_VERSION != tmp_hdr.version)
+                downgrade = true;
+            }
+            else if (valid && CURR_VERSION != tmp_hdr.version) {
                 // Even if there are no changes needed to the data,
                 // we need to update the version fields on next write.
                 dirty = true;
+                if (CURR_VERSION < tmp_hdr.version)
+                    // If the original settings were of a newer version,
+                    // set a flag indicating this to help the firmware make
+                    // an informed decision of when to write the settings.
+                    downgrade = true;
+            }
 
             if (valid) {
                 uint32_t hdr_checksum =
@@ -190,6 +199,11 @@ namespace koryuu_settings {
             dirty = true;
         }
 
+        YAAL_INLINE("KoryuuSettings::is_downgrading()")
+        bool is_downgrading() const {
+            return downgrade;
+        }
+
         void write() {
             if (dirty) {
                 settings.hdr.length = sizeof(settings);
@@ -204,6 +218,7 @@ namespace koryuu_settings {
                 eeprom_update_block(&settings,
                     eeprom_settings, sizeof(settings));
                 dirty = false;
+                downgrade = false;
             }
         }
     };
