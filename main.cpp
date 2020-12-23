@@ -252,7 +252,7 @@ static inline void setup_ad_black_magic()
 }
 
 // Returns true if no further settings should be applied.
-static bool apply_output_settings(bool disable_outputs_on_freerun,
+static inline bool apply_output_settings(bool disable_outputs_on_freerun,
         bool apply_decoder, bool apply_encoder)
 {
     bool ret = false;
@@ -880,9 +880,11 @@ int main(void)
                         (lock_flag ? FREERUN_STATUS_LOCKED :
                             FREERUN_STATUS_UNKNOWN);
                 (void) apply_output_settings(
-                    (!DEC_TEST_PATTERN || disable_freerun) && freerun_flag, true, true);
+                    (!DEC_TEST_PATTERN || disable_freerun), true, false);
+                encoder_setup_needed = true;
             }
-            if (ilace_flag && interlace_status != INTERLACE_STATUS_INTERLACED) {
+            if (ilace_flag && interlace_status != INTERLACE_STATUS_INTERLACED)
+            {
                 interlace_status = INTERLACE_STATUS_INTERLACED;
                 encoder_setup_needed = true;
             }
