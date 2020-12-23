@@ -83,6 +83,8 @@ Input curr_input;
 using koryuu_settings::ConvSettings;
 using koryuu_settings::KoryuuSettings;
 static EEMEM ConvSettings eeprom_settings;
+static bool apply_output_settings(bool disable_outputs_on_freerun,
+        bool apply_decoder, bool apply_encoder);
 
 #if ERROR_PANIC
 __attribute__((noreturn))
@@ -146,20 +148,19 @@ static void setup_timer0()
     TIMSK0 = _BV(OCIE0A);
 }
 
-static void setup_encoder()
+static void setup_encoder(bool reset = false)
 {
-#if 0
-    // Software reset. Ignore the I2C transaction failure.
-    I2C_WRITE<false>(encoder.address, 0x17, 0x02);
-    _delay_ms(1);
-#endif
-#if 0
-    // All DACs and PLL enabled
-    I2C_WRITE(encoder.address, 0x00, 0x1c);
-#else
-    // All DACs enabled, PLL disabled (only 2x oversampling)
-    I2C_WRITE(encoder.address, 0x00, 0x1e);
-#endif
+    if (reset) {
+        // Software reset. Ignore the I2C transaction failure.
+        I2C_WRITE<false>(encoder.address, 0x17, 0x02);
+        _delay_ms(1);
+    }
+
+    if (apply_output_settings(!DEC_TEST_PATTERN || disable_freerun,
+        false, true))
+    {
+        return;
+    }
 
     // Enable DAC autopower-down (based on cable detection)
     I2C_WRITE(encoder.address, 0x10, 0x10);
@@ -250,6 +251,34 @@ static inline void setup_ad_black_magic()
     I2C_WRITE(decoder.address, 0x82, 0x68);
 }
 
+// Returns true if no further settings should be applied.
+static bool apply_output_settings(bool disable_outputs_on_freerun,
+        bool apply_decoder, bool apply_encoder)
+{
+    bool ret = false;
+    if (disable_outputs_on_freerun && freerun_status != FREERUN_STATUS_LOCKED)
+    {
+        if (apply_decoder)
+            // Tristate decoder output drivers, enable VBI.
+            decoder.set_output_control(true, true);
+        if (apply_encoder) {
+            // Put encoder to sleep.
+            I2C_WRITE(encoder.address, 0x00, 0x01);
+            ret = true;
+        }
+    }
+    else {
+        if (apply_decoder)
+            // Enable decoder output drivers, enable VBI
+            decoder.set_output_control(false, true);
+        if (apply_encoder)
+                // All DACs enabled, PLL disabled (only 2x oversampling)
+                I2C_WRITE(encoder.address, 0x00, 0x1e);
+    }
+
+    return ret;
+}
+
 using koryuu_settings::PhysInput;
 using koryuu_settings::PhysInput::INPUT_CVBS;
 using koryuu_settings::PhysInput::INPUT_SVIDEO;
@@ -337,16 +366,7 @@ static void setup_video(PhysInput input, bool pedestal, bool smoothing)
         decoder.select_autodetection(AD_PALBGHID_NTSCJ_SECAM);
 
     // Output control
-    if ((!DEC_TEST_PATTERN || disable_freerun) &&
-        freerun_status != FREERUN_STATUS_LOCKED)
-    {
-        // Tristate output drivers, enable VBI
-        decoder.set_output_control(true, true);
-    }
-    else {
-        // Enable output drivers, enable VBI
-        decoder.set_output_control(false, true);
-    }
+    apply_output_settings(!DEC_TEST_PATTERN || disable_freerun, true, false);
 
     // Extended output control
     // Output full range, enable SFL, blank chroma during VBI, ITU BT.656-4
@@ -847,17 +867,20 @@ int main(void)
 #endif
             }
             dec_status3 = new_status3;
+            bool lock_flag = !!(dec_status1 & 0x01)
+                /* && !!(new_status3 & 0x01) */;
             bool ilace_flag = !!(dec_status3 & 0x40);
             bool freerun_flag = !!(dec_status3 & 0x10);
             if (freerun_flag !=
                 (freerun_status == FREERUN_STATUS_RUNNING_FREE) ||
                 freerun_status == FREERUN_STATUS_UNKNOWN)
             {
-                if (!DEC_TEST_PATTERN || disable_freerun)
-                    decoder.set_output_control(freerun_flag, true);
                 freerun_status = freerun_flag ?
                     FREERUN_STATUS_RUNNING_FREE :
-                    FREERUN_STATUS_LOCKED;
+                        (lock_flag ? FREERUN_STATUS_LOCKED :
+                            FREERUN_STATUS_UNKNOWN);
+                (void) apply_output_settings(
+                    (!DEC_TEST_PATTERN || disable_freerun) && freerun_flag, true, true);
             }
             if (ilace_flag && interlace_status != INTERLACE_STATUS_INTERLACED) {
                 interlace_status = INTERLACE_STATUS_INTERLACED;
