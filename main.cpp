@@ -272,8 +272,8 @@ static bool apply_output_settings(bool disable_outputs_on_freerun,
             // Enable decoder output drivers, enable VBI
             decoder.set_output_control(false, true);
         if (apply_encoder)
-                // All DACs enabled, PLL disabled (only 2x oversampling)
-                I2C_WRITE(encoder.address, 0x00, 0x1e);
+            // All DACs enabled, PLL disabled (only 2x oversampling)
+            I2C_WRITE(encoder.address, 0x00, 0x1e);
     }
 
     return ret;
