@@ -1,6 +1,21 @@
 Changelog for the Koryuu firmware
 =================================
 
+Version 1.1-RC2
+---------------
+	Notes:
+      - Second release candidate.
+      - Intended as the firmware the second Koryuu batch ships with.
+
+	Fixes:
+	  - Attempt to make the "-ntp" firmware more robust.
+	    - There was a bug report for 1.1-test1 and 1.1-RC1 where the test
+		  pattern was shown when nothing is connected to the CVBS/S-Video
+		  inputs. Have been unable to reproduce, but trying to see if
+		  consolidating control of the output settings for both the decoder
+		  and the encoder will resolve this by eliminating potential corner
+		  cases.
+
 Version 1.1-RC1
 ---------------
     Notes:
