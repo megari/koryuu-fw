@@ -1,9 +1,19 @@
 Changelog for the Koryuu firmware
 =================================
+Version 1.1-RC3
+---------------
+    Notes:
+      - Third release candidate.
+      - Intended as the firmware the second Koryuu batch ships with.
+
+    Fixes:
+      - Fully setup encoder on change of free-run status.
+        - One user reported that -RC2 sometimes failed to wake up from sleep
+          if an input was activated after a period of having no active input.
 
 Version 1.1-RC2
 ---------------
-	Notes:
+    Notes:
       - Second release candidate.
       - Intended as the firmware the second Koryuu batch ships with.
 
