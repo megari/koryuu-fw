@@ -125,7 +125,11 @@ enum : uint8_t {
     FREERUN_STATUS_LOCKED = 2,
 } freerun_status = FREERUN_STATUS_UNKNOWN;
 
+#if DEC_TEST_PATTERN
 bool disable_freerun = false;
+#else
+constexpr bool disable_freerun = true;
+#endif
 
 koryuu::DebouncedButton<PortD5> input_change;
 koryuu::DebouncedButton<PortB7> option;
@@ -576,7 +580,9 @@ int main(void)
     }
 
     curr_input = settings.settings.default_input;
+#if DEC_TEST_PATTERN
     disable_freerun = !!settings.settings.disable_free_run;
+#endif
     setup_video(input_to_phys[curr_input],
         input_to_pedestal[curr_input], !!settings.settings.smoothing);
     led_CVBS = input_to_phys[curr_input] == INPUT_CVBS;
@@ -619,8 +625,14 @@ int main(void)
             // Save current settings to EEPROM.
             settings.settings.default_input = curr_input;
             settings.settings.smoothing = smoothing_enabled ? 0x01 : 0x00;
+
+            // Only modify the free-run disable flag if we
+            // have not statically disabled free-run mode.
+#if DEC_TEST_PATTERN
             settings.settings.disable_free_run =
                 disable_freerun ? 0x01 : 0x00;
+#endif
+
             settings.set_dirty();
 #if DEBUG
             serial << _T("Writing settings to EEPROM:\r\n");
