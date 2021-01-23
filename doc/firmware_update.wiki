@@ -1,0 +1,123 @@
+== Firmware Upgrade ==
+
+The current release firmware is version 1.0 and comes pre-flashed on all Koryuu’s sold.
+
+New firmware versions can be [https://github.com/megari/koryuu-fw/releases downloaded from the page here.]
+
+To program new firmware, a USB ASP programmer is required.
+
+=== Recommended Programmers ===
+
+* [https://www.olimex.com/Products/AVR/Programmers/AVR-ISP-MK2/open-source-hardware Olimex AVR-ISP-MK2]
+* [https://www.sparkfun.com/products/9825 Sparkfun's Pocket AVR Programmer]
+* [https://www.sparkfun.com/products/8702 Sparkfun's STK500 Compatible USB Programmer]
+* [https://www.fischl.de/usbasp/ USB ASP programmer]
+** USB drivers for Windows are available [https://protostack.com.au/download/USBasp-win-driver-x86-x64-v3.0.7.zip here]
+
+=== Koryuu transcoder firmware flash procedure (Windows) ===
+
+'''Prerequisite Requirements'''
+
+* Koryuu transcoder and PSU
+* Suitable USB ASP programmer (see above)
+* Ribbon cable and 10 to 6 pin adapter for ASP (AVRisp)
+* A computer with Windows 7/8/8.1/10 with a USB port
+* Compiled Firmware file
+<br>
+Note - Firmware needs to have been flashed before the unit is functional. If powered up without firmware, only the PWR LED next to the power switch will light up. This will simply indicate that the unit is receiving power, but tells nothing else. All units sold by VideoGamePerfection.com come with firmware pre-flashed.
+
+=== Software setup ===
+
+This section walks us through setting up the drivers and software needed to update the firmware on your Koryuu.
+
+There are two pieces of software required:
+* [https://zadig.akeo.ie/ Zadig] for installing drivers for your programmer,
+* [https://blog.zakkemble.net/avrdudess-a-gui-for-avrdude/ AVRDUDESS] for flashing the firmware.
+
+''' Install driver using Zadig '''
+
+First, we need to install Zadig, which is a nifty piece of software for installing drivers for most kinds of ISP/ASP programmers. Simply point your web browser to [https://zadig.akeo.ie/], find the link labeled ''Download'' and save the executable file on your desktop (or whichever location you prefer).
+
+You may now plug your programmer into one of the USB ports on your computer, if you have not done so already. Please see the Hardware setup section for more details.
+
+Then, run the executable you saved previously. If an elevation ([https://en.wikipedia.org/wiki/User_Account_Control UAC]) prompt pops up, accept it to continue.
+
+The Zadig window should initially look like this:
+(placeholder for Zadig initial screen)
+
+The type of your programmer may already be shown in the selection box, as in the image above (''AVRISP mkII''). If it is not, and you are sure it is connected, select the correct programmer from the list. Tick ''Options->List All Devices'' to show all supported devices if none show up.
+
+Then you should choose a driver. For our purposes, selecting either the 'libusbK' or 'libusb-win32' driver should be a safe bet, the former having somewhat higher performance than the latter. Click ''Install Driver''.
+
+(placeholder for Zadig screen with libusbK selected, with installation not yet started.)
+
+Once the installation is finished, you should see a dialog stating so.
+(placeholder for Zadig screen with installation finished)
+
+Finally, you should see something similar to this, indicating that you now have a proper driver set up for your programmer.
+(placeholder for Zadig screen with libusbK already installed)
+
+The driver setup is now complete. You may now close Zadig.
+
+''' Install and run AVRDUDESS '''
+
+Open [https://blog.zakkemble.net/avrdudess-a-gui-for-avrdude/] in your web browser and download the portable version of AVRDUDESS, which does not require any particular installation, other than extracting the archive.
+
+Extract the archive to a location of your choosing and then open said location if Windows does not do that for you. There may be more than one file labeled ''Application''. Choose the one with a distinct icon, named ''avrdudess'' or ''avrdudess.exe'', and run it by double-clicking it.
+
+At this point you may get a ''Windows protected your PC'' box, warning that you attempted to run an unrecognized program:
+(placeholder for Windows protected your PC screen)
+
+This is normal, and you should click ''More info'', which makes a button labeled ''Run anyway'' appear. Click it.
+(placeholder for Run anyway button)
+
+Next, if you have not run any .Net applications before, Windows may prompt you to install the [https://en.wikipedia.org/wiki/.NET_Framework .Net Framework]. This is completely normal and safe, so allow Windows to install it. This may require accepting another elevation prompt. After the installation is done, you can try opening AVRDUDESS again.
+
+The AVRDUDESS window is a bit complicated, but fear not!
+(placeholder for AVRDUDESS application window)
+
+First, select the correct kind of programmer for your device from the top-left selection box. Then select the appropriate port. The port is probably going to be one of ''usb'', ''COM1'' or ''COM2'', but you can try each option until you find the correct one.
+
+Try detecting the Koryuu on-board MCU using the ''Detect'' button. It should come up as ''atmega328p''. If not, select ''atmega328p'' manually.
+
+As an optional step to verify that the programmer is working, you can try and read the current firmware image from the Koryuu.
+
+=== Hardware setup ===
+
+'''To avoid damage, the programmer must be set at 5V logic high level, with no power supplied to the Koryuu by the programmer (target mode off).''' These settings are usually configurable through jumpers on the programmer itself. The exact location varies depending on the model. Usually the jumpers are labeled according to their function. Sometimes there is a need to open up the casing of the programmer to access these jumpers.
+
+1. Connect the USB programmer to the PC
+
+2. Connect the ribbon cable and adapter (if one is needed) to the programmer
+
+3. Connect the other end of the ribbon cable to the Koryuu transcoder via the header shown in the picture below. Pin 2 is voltage or VCC so orientate the ribbon cable accordingly. Double-check this before proceeding.
+
+[[File:Koryuu-top.jpg]]
+
+4. Check again the orientation of the ribbon cable. Pin 2 is voltage and must match pin 2 as shown on the picture above.
+
+5. Power on the Koryuu transcoder.
+
+6. If needed, install the driver for your programmer. If you are not sure if you have an appropriate driver installed or how to install one, see the Software setup section for details.
+
+7. Start your programmer software. If you do not have one installed yet, see the Software setup section for instructions for one such software.
+
+8. Flash the new firmware image using your programmer software. If you are not sure how, see the Software setup section for instructions how to do this with a particular piece of software.
+
+The Koryuu is now updated.
+
+=== Firmware Revision History ===
+
+Version 1.0 – Release
+
+Version 1.1-test0 – Public BETA - Bug fixes and other changes. Settings can now be saved. Improved robustness of video mode changes.
+
+Version 1.1-test1 – Public BETA - Some further fixes to tracking of current video mode. Improvements to settings code (validation, forward compatibility). Transitions between interlaced and progressive video modes seem to be robust now.
+
+Version 1.1-RC1 – Unofficial Release candidate 1 - Settings created by a newer firmware version will not be automagically overwritten on startup.
+
+Version 1.1-RC2 – Unofficial Release candidate 2 - Improvements to the -ntp firmware variant.
+
+Version 1.1-RC3 – Unofficial Release candidate 3 - Fully setup encoder chip when the currently selected input turns from on to off or vice versa.
+
+See the [https://github.com/megari/koryuu-fw/releases firmware download page for more information.]
