@@ -34,7 +34,7 @@ There are two pieces of software required:
 * [https://zadig.akeo.ie/ Zadig] for installing drivers for your programmer,
 * [https://blog.zakkemble.net/avrdudess-a-gui-for-avrdude/ AVRDUDESS] for flashing the firmware.
 
-''' Install driver using Zadig '''
+'''Install driver using Zadig'''
 
 First, we need to install Zadig, which is a nifty piece of software for installing drivers for most kinds of ISP/ASP programmers. Simply point your web browser to [https://zadig.akeo.ie/], find the link labeled ''Download'' and save the executable file on your desktop (or whichever location you prefer).
 
@@ -42,33 +42,32 @@ You may now plug your programmer into one of the USB ports on your computer, if 
 
 Then, run the executable you saved previously. If an elevation ([https://en.wikipedia.org/wiki/User_Account_Control UAC]) prompt pops up, accept it to continue.
 
-The Zadig window should initially look like this:
-(placeholder for Zadig initial screen)
+The Zadig window should initially look like this:<br>
+[[File:img/Zadig_initial_avrispmkII.png]]
 
 The type of your programmer may already be shown in the selection box, as in the image above (''AVRISP mkII''). If it is not, and you are sure it is connected, select the correct programmer from the list. Tick ''Options->List All Devices'' to show all supported devices if none show up.
 
-Then you should choose a driver. For our purposes, selecting either the 'libusbK' or 'libusb-win32' driver should be a safe bet, the former having somewhat higher performance than the latter. Click ''Install Driver''.
+Then you should choose a driver. For our purposes, selecting either the 'libusbK' or 'libusb-win32' driver should be a safe bet, the former having somewhat higher performance than the latter. Click ''Install Driver''.<br>
+[[File:img/Zadig_libusbK_avrispmkII.png]]
 
-(placeholder for Zadig screen with libusbK selected, with installation not yet started.)
+Once the installation is finished, you should see a dialog stating so.<br>
+[[File:img/Zadig_libusbK_after_install_avrispmkII.png]]
 
-Once the installation is finished, you should see a dialog stating so.
-(placeholder for Zadig screen with installation finished)
-
-Finally, you should see something similar to this, indicating that you now have a proper driver set up for your programmer.
-(placeholder for Zadig screen with libusbK already installed)
+Finally, you should see something similar to this, indicating that you now have a proper driver set up for your programmer.<br>
+[[File:img/Zadig_libusbK_driver_installed_avrispmkII.png]]
 
 The driver setup is now complete. You may now close Zadig.
 
-''' Install and run AVRDUDESS '''
+'''Install and run AVRDUDESS'''
 
 Open [https://blog.zakkemble.net/avrdudess-a-gui-for-avrdude/] in your web browser and download the portable version of AVRDUDESS, which does not require any particular installation, other than extracting the archive.
 
 Extract the archive to a location of your choosing and then open said location if Windows does not do that for you. There may be more than one file labeled ''Application''. Choose the one with a distinct icon, named ''avrdudess'' or ''avrdudess.exe'', and run it by double-clicking it.
 
-At this point you may get a ''Windows protected your PC'' box, warning that you attempted to run an unrecognized program:
+At this point you may get a ''Windows protected your PC'' box, warning that you attempted to run an unrecognized program:<br>
 (placeholder for Windows protected your PC screen)
 
-This is normal, and you should click ''More info'', which makes a button labeled ''Run anyway'' appear. Click it.
+This is normal, and you should click ''More info'', which makes a button labeled ''Run anyway'' appear. Click it.<br>
 (placeholder for Run anyway button)
 
 Next, if you have not run any .Net applications before, Windows may prompt you to install the [https://en.wikipedia.org/wiki/.NET_Framework .Net Framework]. This is completely normal and safe, so allow Windows to install it. This may require accepting another elevation prompt. After the installation is done, you can try opening AVRDUDESS again.
