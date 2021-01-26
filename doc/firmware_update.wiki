@@ -96,7 +96,7 @@ As an optional step to verify that the programmer is working, you can try and re
 
 3. Connect the other end of the ribbon cable to the Koryuu transcoder via the header shown in the picture below. Pin 2 is voltage or VCC so orientate the ribbon cable accordingly. Double-check this before proceeding.
 
-[[File:Koryuu-top.jpg]]
+[[File:img/Koryuu-top.jpg]]
 
 4. Check again the orientation of the ribbon cable. Pin 2 is voltage and must match pin 2 as shown on the picture above.
 
