@@ -63,16 +63,21 @@ The driver setup is now complete. You may now close Zadig.
 Open [https://blog.zakkemble.net/avrdudess-a-gui-for-avrdude/] in your web browser and download the portable version of AVRDUDESS, which does not require any particular installation, other than extracting the archive.
 
 Extract the archive to a location of your choosing and then open said location if Windows does not do that for you. There may be more than one file labeled ''Application''. Choose the one with a distinct icon, named ''avrdudess'' or ''avrdudess.exe'', and run it by double-clicking it.
+[[File:img/AVRDUDESS_folder_exe_selected.png]]
 
 At this point you may get a ''Windows protected your PC'' box, warning that you attempted to run an unrecognized program:<br>
-(placeholder for Windows protected your PC screen)
+[[File:img/AVRDUDESS_folder_nag1.png]]
 
 This is normal, and you should click ''More info'', which makes a button labeled ''Run anyway'' appear. Click it.<br>
-(placeholder for Run anyway button)
+[[File:img/AVRDUDESS_folder_nag2.png]]
 
-Next, if you have not run any .Net applications before, Windows may prompt you to install the [https://en.wikipedia.org/wiki/.NET_Framework .Net Framework]. This is completely normal and safe, so allow Windows to install it. This may require accepting another elevation prompt. After the installation is done, you can try opening AVRDUDESS again.
+Next, if you have not run any .Net applications before, Windows may prompt you to install the [https://en.wikipedia.org/wiki/.NET_Framework .Net Framework].<br>
+[[File:img/AVRDUDESS_folder_dotnet_required.png]]
 
-The AVRDUDESS window is a bit complicated, but fear not!
+This is completely normal and safe, so allow Windows to install it. This may require accepting another elevation prompt. After the installation is done, you can try opening AVRDUDESS again.<br>
+[[File:img/AVRDUDESS_folder_dotnet_installed.png]]
+
+The AVRDUDESS window is a bit complicated, but fear not!<br>
 (placeholder for AVRDUDESS application window)
 
 First, select the correct kind of programmer for your device from the top-left selection box. Then select the appropriate port. The port is probably going to be one of ''usb'', ''COM1'' or ''COM2'', but you can try each option until you find the correct one.
