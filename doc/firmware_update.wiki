@@ -110,18 +110,4 @@ As an optional step to verify that the programmer is working, you can try and re
 
 The Koryuu is now updated.
 
-=== Firmware Revision History ===
-
-Version 1.0 – Release
-
-Version 1.1-test0 – Public BETA - Bug fixes and other changes. Settings can now be saved. Improved robustness of video mode changes.
-
-Version 1.1-test1 – Public BETA - Some further fixes to tracking of current video mode. Improvements to settings code (validation, forward compatibility). Transitions between interlaced and progressive video modes seem to be robust now.
-
-Version 1.1-RC1 – Unofficial Release candidate 1 - Settings created by a newer firmware version will not be automagically overwritten on startup.
-
-Version 1.1-RC2 – Unofficial Release candidate 2 - Improvements to the -ntp firmware variant.
-
-Version 1.1-RC3 – Unofficial Release candidate 3 - Fully setup encoder chip when the currently selected input turns from on to off or vice versa.
-
-See the [https://github.com/megari/koryuu-fw/releases firmware download page for more information.]
+See the [https://github.com/megari/koryuu-fw/releases firmware download page] for more information.
