@@ -77,14 +77,33 @@ Next, if you have not run any .Net applications before, Windows may prompt you t
 This is completely normal and safe, so allow Windows to install it. This may require accepting another elevation prompt. After the installation is done, you can try opening AVRDUDESS again.<br>
 [[File:img/AVRDUDESS_folder_dotnet_installed.png]]
 
-The AVRDUDESS window is a bit complicated, but fear not!<br>
-(placeholder for AVRDUDESS application window)
+'''Flash the firmware update using AVRDUDESS'''
 
-First, select the correct kind of programmer for your device from the top-left selection box. Then select the appropriate port. The port is probably going to be one of ''usb'', ''COM1'' or ''COM2'', but you can try each option until you find the correct one.
+Now we are ready to flash the new firmware. If you do not have AVRDUDESS open yet, open it now. The AVRDUDESS window may look a bit daunting, but fear not! We will walk through the entire process step by step.<br>
+[[File:img/AVRDUDESS_main_window_initial.png]]
 
-Try detecting the Koryuu on-board MCU using the ''Detect'' button. It should come up as ''atmega328p''. If not, select ''atmega328p'' manually.
+First, select the correct kind of programmer for your device from the top-left selection box.<br>
+[[File:img/AVRDUDESS_main_window_programmer_menu.png]]
 
-As an optional step to verify that the programmer is working, you can try and read the current firmware image from the Koryuu.
+Then select the appropriate port. The port is probably going to be one of ''usb'' or ''COM1'', but you can try each option until you find the correct one, or type the correct one in the selection box.<br>
+[[File:img/AVRDUDESS_main_window_port_menu.png]]
+
+Try detecting the Koryuu on-board MCU using the ''Detect'' button. It should come up as ''ATmega328P''.<br>
+[[File:img/AVRDUDESS_main_window_mcu_detect.png]]
+
+If not, select ''ATmega328P'' manually.<br>
+[[File:img/AVRDUDESS_main_window_mcu_menu.png]]
+
+<!-- As an optional step to verify that the programmer is working, you can try and read the current firmware image from the Koryuu. -->
+
+Within the part of the window labeled ''Flash'', enter the path to the Koryuu firmware image or select it using the file picker dialog. Select ''Write'' on the radio selector and either ''Auto'' or ''Intel Hex'' as the format. Then click ''Go''.<br>
+[[File:img/AVRDUDESS_main_window_flashing.png]]
+
+If everything went well, you should see a message like so. Please make sure that the verification part is successful.<br>
+[[File:img/AVRDUDESS_main_window_flash_success.png]]
+
+If you get a failure, such as the one below, make sure all cables are plugged correctly and the settings are as described in the '''Hardware setup''' section. Then try again.<br>
+[[File:img/AVRDUDESS_main_window_flash_failure.png]]
 
 === Hardware setup ===
 
