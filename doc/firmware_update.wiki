@@ -14,9 +14,7 @@ To program new firmware, a USB ASP programmer is required.
 * [https://www.fischl.de/usbasp/ USB ASP programmer]
 ** USB drivers for Windows are available [https://protostack.com.au/download/USBasp-win-driver-x86-x64-v3.0.7.zip here]
 
-=== Koryuu transcoder firmware flash procedure (Windows) ===
-
-'''Prerequisite Requirements'''
+=== Prerequisite Requirements ===
 
 * Koryuu transcoder and PSU
 * Suitable USB ASP programmer (see above)
@@ -34,7 +32,7 @@ There are two pieces of software required:
 * [https://zadig.akeo.ie/ Zadig] for installing drivers for your programmer,
 * [https://blog.zakkemble.net/avrdudess-a-gui-for-avrdude/ AVRDUDESS] for flashing the firmware.
 
-'''Install driver using Zadig'''
+==== Install driver using Zadig ====
 
 First, we need to install Zadig, which is a nifty piece of software for installing drivers for most kinds of ISP/ASP programmers. Simply point your web browser to [https://zadig.akeo.ie/], find the link labeled ''Download'' and save the executable file on your desktop (or whichever location you prefer).
 
@@ -58,9 +56,9 @@ Finally, you should see something similar to this, indicating that you now have 
 
 The driver setup is now complete. You may now close Zadig.
 
-'''Install and run AVRDUDESS'''
+==== Install and run AVRDUDESS ====
 
-Open [https://blog.zakkemble.net/avrdudess-a-gui-for-avrdude/] in your web browser and download the portable version of AVRDUDESS, which does not require any particular installation, other than extracting the archive.
+Open [https://blog.zakkemble.net/avrdudess-a-gui-for-avrdude/ the AVRDUDESS web page] in your web browser and download the portable version of AVRDUDESS, which does not require any particular installation, other than extracting the archive.
 
 Extract the archive to a location of your choosing and then open said location if Windows does not do that for you. There may be more than one file labeled ''Application''. Choose the one with a distinct icon, named ''avrdudess'' or ''avrdudess.exe'', and run it by double-clicking it.
 [[File:img/AVRDUDESS_folder_exe_selected.png]]
@@ -77,7 +75,7 @@ Next, if you have not run any .Net applications before, Windows may prompt you t
 This is completely normal and safe, so allow Windows to install it. This may require accepting another elevation prompt. After the installation is done, you can try opening AVRDUDESS again.<br>
 [[File:img/AVRDUDESS_folder_dotnet_installed.png]]
 
-'''Flash the firmware update using AVRDUDESS'''
+==== Flash the firmware update using AVRDUDESS ====
 
 Now we are ready to flash the new firmware. If you do not have AVRDUDESS open yet, open it now. The AVRDUDESS window may look a bit daunting, but fear not! We will walk through the entire process step by step.<br>
 [[File:img/AVRDUDESS_main_window_initial.png]]
@@ -121,11 +119,11 @@ If you get a failure, such as the one below, make sure all cables are plugged co
 
 5. Power on the Koryuu transcoder.
 
-6. If needed, install the driver for your programmer. If you are not sure if you have an appropriate driver installed or how to install one, see the Software setup section for details.
+6. If needed, install the driver for your programmer. If you are not sure if you have an appropriate driver installed or how to install one, see the '''Software setup''' section for details.
 
-7. Start your programmer software. If you do not have one installed yet, see the Software setup section for instructions for one such software.
+7. Start your programmer software. If you do not have one installed yet, see the '''Software setup''' section for instructions for one such software.
 
-8. Flash the new firmware image using your programmer software. If you are not sure how, see the Software setup section for instructions how to do this with a particular piece of software.
+8. Flash the new firmware image using your programmer software. If you are not sure how, see the '''Software setup''' section for instructions how to do this with a particular piece of software.
 
 The Koryuu is now updated.
 
