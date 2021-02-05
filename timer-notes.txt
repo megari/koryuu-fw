@@ -1,0 +1,34 @@
+
+
+
+template<size_t bits, typename TccrA, typename TccrB, typename TccrC,
+    typename TCntL, typename TCntH,
+    typename OcrAL, typename OcrAH,
+    typename OcrBL, typename OcrBH,
+    typename IcrL, typename IcrH,
+    typename Timsk, typename Tifr>
+class Timer;
+/*
+{
+    // PinA
+    // PinB
+
+
+    /*
+     * Modes of operation:
+     *  - Normal (0,1,2)
+     *  - CTC (0,1,2)
+     *  - Fast PWM (0,1,2)
+     *  - Phase Correct PWM (0,1,2)
+     *  - Phase and Frequency Correct PWM (1)
+     */
+
+}
+*/
+
+
+template<typename Tccr, typename TCntL, typename TCntH,
+    typename Ocr, typename Icr, typename Timsk, typename Tifr>
+class PWMPin {
+    Tccr tccr;
+}
