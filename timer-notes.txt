@@ -26,6 +26,29 @@ class Timer;
 }
 */
 
+template<typename T>
+struct timer_traits {
+        static uint8_t bits;
+        static struct opmode_traits {
+                bool has_normal;
+                bool has_ctc;
+                bool has_fast_pwm;
+                bool has_phase_correct_pwm;
+                bool has_phase_freq_correct_pwm;
+        };
+};
+
+template<>
+struct timer_traits<Timer1> {
+        static uint8_t bits = 16;
+        static struct opmode_traits {
+                bool has_normal = true;
+                bool has_ctc = true;
+                bool has_fast_pwm = true;
+                bool has_phase_correct_pwm = true;
+                bool has_phase_freq_correct_pwm = true;
+        };
+};
 
 template<typename Tccr, typename TCntL, typename TCntH,
     typename Ocr, typename Icr, typename Timsk, typename Tifr>
