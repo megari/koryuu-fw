@@ -94,8 +94,8 @@ namespace koryuu_timers {
         freq_t freq_opt = (freq_t) -1;
         bool found_solution = false;
 
-        constexpr uint16_t prescale_factors[] = { 1, 8, 64, 256, 1024 };
-        //constexpr uint16_t prescale_factors[] = { 1024, 256, 64, 8, 1 };
+        //constexpr uint16_t prescale_factors[] = { 1, 8, 64, 256, 1024 };
+        constexpr uint16_t prescale_factors[] = { 1024, 256, 64, 8, 1 };
         for (const auto factor : prescale_factors) {
             /*
              * Max frequency attainable (TOP == 0):
@@ -114,7 +114,12 @@ namespace koryuu_timers {
              *
              * Granularity at given freq:
              * f_gran(f) = (f_clk_I/O)/(2 * prescale_factor * (1 + TOP))
+             *
              */
+            const freq_t freq_max = f_io/(2 * factor);
+            if (freq_max < freq)
+                continue;
+
             const freq_t cur_top_floor =
                 target_val_floor / (freq_t) factor - 1;
             const freq_t cur_top_ceil =
@@ -147,12 +152,12 @@ namespace koryuu_timers {
             if (f_min_diff == f_old_min_diff)
                 continue;
             else if (f_min_diff == f_floor_diff) {
-                params_opt = { freq, cur_top_ceil, factor };
+                params_opt = { freq, (uint16_t) cur_top_ceil, factor };
                 freq_opt = freq_floor;
                 found_solution = true;
             }
             else {
-                params_opt = { freq, cur_top_floor, factor };
+                params_opt = { freq, (uint16_t) cur_top_floor, factor };
                 freq_opt = freq_ceil;
                 found_solution = true;
             }
@@ -161,8 +166,6 @@ namespace koryuu_timers {
         if (found_solution)
             return params_opt;
     }
-
-    static uint8_t foo = 0;
 
     template<typename TccrA, typename TccrB, typename TccrC,
         typename TCnt, typename OcrA, typename OcrB, typename Icr,
@@ -181,22 +184,6 @@ namespace koryuu_timers {
         Timsk timsk;
         Tifr tifr;
 
-        //template<OpMode opmode>
-        //void set_clock__(const uint32_t freq);
-
-#if 0
-        template<typename T, OpMode opmode,
-            enable_if_t<timer_traits::has_opmode<T, opmode>, T>* = nullptr>
-        void set_clock_(const uint32_t freq) {
-            set_clock__<opmode>(freq);
-        }
-
-        template<typename T, OpMode opmode>
-        void set_clock(const uint32_t freq);
-
-        template<OpMode opmode>
-        void set_clock(const uint32_t freq);
-#endif
     public:
 
         freq_t target_freq;
@@ -213,13 +200,15 @@ namespace koryuu_timers {
 
 private:
 
+#if 0
         template<OpMode opmode,
             freq_t freq,
             enable_if_t<timer_traits::has_opmode<self_type, opmode>, self_type>* = nullptr,
             enable_if_t<opmode == OM_NORMAL, OpMode>* = nullptr>
         void set_clock_() {
-            koryuu_timers::foo += freq;
+            ;
         }
+#endif
 
         template<OpMode opmode,
             freq_t freq,
