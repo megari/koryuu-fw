@@ -1,6 +1,6 @@
 [submodule "vendor/yaal"]
 	path = vendor/yaal
-	url = https://github.com/megari/yaal.git
+	url = ssh://git@github.com/megari/yaal.git
 [submodule "vendor/yaamake"]
 	path = vendor/yaamake
-	url = https://github.com/megari/yaamake.git
+	url = ssh://git@github.com/megari/yaamake.git

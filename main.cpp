@@ -14,8 +14,9 @@
 #include "crc32.hh"
 #include "debounce.hh"
 #include "koryuu_settings.hh"
+#include "timer.hh"
 
-_T_DECL(FW_VERSION, "1.1-RC3");
+_T_DECL(FW_VERSION, "1.1-RC4");
 __attribute__((used))
 static const auto& FW_VERSION = _T_REF(FW_VERSION);
 
@@ -590,6 +591,33 @@ int main(void)
     led_OPT = !!settings.settings.smoothing;
 
 #if DEBUG
+
+        koryuu_timers::timertest();
+        serial << _T("\r\n\r\nTimer test\r\n");
+        serial << _T("\tTarget frequency: ") <<
+            asdec(koryuu_timers::timer1.target_freq) << _T("Hz\r\n");
+        serial << _T("\tActual frequency: ") <<
+            asdec(koryuu_timers::timer1.real_freq) << _T("Hz\r\n");
+        serial << _T("\tTOP value: ") <<
+            asdec(koryuu_timers::timer1.top_val) << _T("\r\n");
+        serial << _T("\tPrescaler factor: 1/") <<
+            asdec(koryuu_timers::timer1.prescaler_factor) << _T("\r\n");
+
+        koryuu_timers::timertest2();
+        serial << _T("\r\n\r\nTimer test\r\n");
+        serial << _T("\tTarget frequency: ") <<
+            asdec(koryuu_timers::timer1.target_freq) << _T("Hz\r\n");
+        serial << _T("\tTarget frequency (hex): 0x") <<
+            ashex(koryuu_timers::timer1.target_freq) << _T("Hz\r\n");
+        serial << _T("\tActual frequency: ") <<
+            asdec(koryuu_timers::timer1.real_freq) << _T("Hz\r\n");
+        serial << _T("\tActual frequency (hex): 0x") <<
+            ashex(koryuu_timers::timer1.real_freq) << _T("Hz\r\n");
+        serial << _T("\tTOP value: ") <<
+            asdec(koryuu_timers::timer1.top_val) << _T("\r\n");
+        serial << _T("\tPrescaler factor: 1/") <<
+            asdec(koryuu_timers::timer1.prescaler_factor) << _T("\r\n");
+
         serial << _T("Initial settings:\r\n");
         serial << _T("\tPhysical input: ")
             << (input_to_phys[curr_input] == INPUT_CVBS ?
@@ -768,6 +796,18 @@ int main(void)
 
             if (new_status1 != dec_status1) {
                 const uint8_t new_vstd = (new_status1 >> 4u) & 0x07u;
+                const bool in_lock = !!(new_status1 & 0x01);
+                const bool lost_lock = !!(new_status1 & 0x02);
+
+                // Try to indicate sync loss
+                if (!in_lock && lost_lock) {
+                    led_CVBS = true;
+                    led_YC = true;
+                }
+                else if (in_lock && !lost_lock) {
+                    led_CVBS = input_to_phys[curr_input] == INPUT_CVBS;
+                    led_YC = input_to_phys[curr_input] == INPUT_SVIDEO;
+                }
 
                 if (dec_vstd != 0xffu)
                     dec_vstd = (dec_status1 >> 4u) & 0x07u;
