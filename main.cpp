@@ -591,7 +591,6 @@ int main(void)
     led_OPT = !!settings.settings.smoothing;
 
 #if DEBUG
-
         koryuu_timers::timertest();
         serial << _T("\r\n\r\nTimer test\r\n");
         serial << _T("\tTarget frequency: ") <<
@@ -604,7 +603,7 @@ int main(void)
             asdec(koryuu_timers::timer1.prescaler_factor) << _T("\r\n");
 
         koryuu_timers::timertest2();
-        serial << _T("\r\n\r\nTimer test\r\n");
+        serial << _T("\r\n\r\nTimer test 2\r\n");
         serial << _T("\tTarget frequency: ") <<
             asdec(koryuu_timers::timer1.target_freq) << _T("Hz\r\n");
         serial << _T("\tTarget frequency (hex): 0x") <<
@@ -616,7 +615,7 @@ int main(void)
         serial << _T("\tTOP value: ") <<
             asdec(koryuu_timers::timer1.top_val) << _T("\r\n");
         serial << _T("\tPrescaler factor: 1/") <<
-            asdec(koryuu_timers::timer1.prescaler_factor) << _T("\r\n");
+            asdec(koryuu_timers::timer1.prescaler_factor) << _T("\r\n\r\n\r\n");
 
         serial << _T("Initial settings:\r\n");
         serial << _T("\tPhysical input: ")
