@@ -36,8 +36,14 @@ namespace koryuu_timers {
     };
 
     template<typename T>
-    constexpr T min_freq(T a, T b) {
-        return a < b ? a : b;
+    constexpr T min_freq(T v) {
+        return v;
+    }
+
+    template<typename T, typename ...Ts>
+    constexpr T min_freq(T a, T b, Ts... rest) {
+        const T tmp_min = a < b ? a : b;
+        return min_freq(tmp_min, rest...);
     }
 
     template<typename T>
@@ -45,12 +51,16 @@ namespace koryuu_timers {
         return a > b ? (a - b) : (b - a);
     }
 
+#define PRINT_DEBUG 0
     template<
         OpMode opmode,
         CTC_Top_Reg top_reg,
         enable_if_t<opmode == OM_CTC, OpMode>* = nullptr,
         enable_if_t<top_reg == CTC_TOP_OCR, OpMode>* = nullptr
         >
+#if !PRINT_DEBUG
+    constexpr
+#endif
     clock_params_16 calc_params_16(freq_t freq) {
         //target_freq = freq;
 #if 0
@@ -77,13 +87,15 @@ namespace koryuu_timers {
         const freq_t target_val_ceil =
             (f_io + 2 * freq - 1) / (2 * freq);
         clock_params_16 params_opt =
-            { (freq_t) -1, (uint16_t) -1, (uint16_t) -1 };
+            { (freq_t) -1, (uint16_t) -1, 0 };
         double freq_opt = -1.;
         bool found_solution = false;
 
+#if PRINT_DEBUG
         std::cout << "Trying to find solution for freq == " << freq << " Hz\n";
         std::cout << "\tTarget val floor == " << target_val_floor << "\n";
         std::cout << "\tTarget val ceiling == " << target_val_ceil << "\n";
+#endif
 
         //constexpr uint16_t prescale_factors[] = { 1, 8, 64, 256, 1024 };
         constexpr uint16_t prescale_factors[] = { 1024, 256, 64, 8, 1 };
@@ -108,20 +120,26 @@ namespace koryuu_timers {
              *
              */
             const double freq_max = (double) f_io/(2 * factor);
+#if PRINT_DEBUG
             std::cout << "Trying prescaler 1/" << factor << "\n";
             std::cout << "\tMaximum frequency: " << freq_max << " Hz\n";
-            if (freq_max < freq)
+#endif
+            if (freq_max < freq) {
+                //params_opt.prescaler_factor = 0ul;
                 continue;
+            }
 
             const freq_t cur_top_floor =
                 target_val_floor / (freq_t) factor - 1;
             const freq_t cur_top_ceil =
                 target_val_ceil / (freq_t) factor - 1;
+#if PRINT_DEBUG
             std::cout << "\tfloor(TOP) == " << cur_top_floor << "\n";
             std::cout << "\tceil(TOP) == " << cur_top_ceil << "\n";
+#endif
             if (cur_top_floor >= (1ull << 16ull) ||
                 cur_top_ceil >= (1ull << 16ull) ||
-                (cur_top_floor < 2 && cur_top_ceil < 2)
+                false //(cur_top_floor == 0 && cur_top_ceil == 0)
 #if 0
             ||
                     (((f_io/(freq_t) factor) / 128) < (1ull << 16ull) &&
@@ -139,21 +157,27 @@ namespace koryuu_timers {
                 cur_top_ceil < (1ull << 16ull) ?
                     (double) f_io / (2 * factor * (1 + cur_top_ceil)) : -1.;
 
+#if PRINT_DEBUG
             std::cout << "\tfloor(real_freq) == " << freq_floor << " Hz\n";
             std::cout << "\tceil(real_freq) == " << freq_ceil << " Hz\n";
+#endif
 
             const double f_ceil_diff = abs_sub_freq((double) freq, freq_ceil);
             const double f_floor_diff = abs_sub_freq((double) freq, freq_floor);
             const double f_old_min_diff = abs_sub_freq((double) freq, freq_opt);
 
+#if PRINT_DEBUG
             std::cout << "\tabs(freq - floor(real_freq)) == " << f_floor_diff << " Hz\n";
             std::cout << "\tabs(freq - ceil(real_freq)) == " << f_ceil_diff << " Hz\n";
             std::cout << "\tabs(freq - freq_opt) == " << f_old_min_diff << " Hz\n";
+#endif
 
             const double f_min_diff =
-                min_freq(min_freq(f_ceil_diff, f_floor_diff), f_old_min_diff);
+                min_freq(f_ceil_diff, f_floor_diff, f_old_min_diff);
 
+#if PRINT_DEBUG
             std::cout << "\tmin_diff == " << f_min_diff << " Hz\n";
+#endif
 
             if (f_min_diff >= f_old_min_diff)
                 continue;
@@ -167,16 +191,20 @@ namespace koryuu_timers {
                 freq_opt = freq_ceil;
                 found_solution = true;
             }
+#if PRINT_DEBUG
             std::cout << "\tNew best solution:\n";
             std::cout << "\t\tFrequency: " << freq_opt << " Hz\n";
             std::cout << "\t\tTOP: " << params_opt.top << "\n";
             std::cout << "\t\tPrescaler: 1/" << factor << "\n";
+#endif
         }
 
-        if (found_solution)
+        //if (found_solution)
             return params_opt;
+#if 0
         else
             return { (freq_t) -1, (uint16_t) -1, (uint16_t) -1 };
+#endif
     }
 
     template<typename TccrA, typename TccrB, typename TccrC,
@@ -228,14 +256,19 @@ private:
                 timer_traits::has_opmode<self_type, opmode>,
                 self_type>* = nullptr,
             enable_if_t<opmode == OM_CTC, OpMode>* = nullptr>
-        inline void set_clock_() {
+        constexpr inline void set_clock_() {
             constexpr freq_t f_io = 1'000'000ul; //yaal::cpu.clock.get();
-            const clock_params_16 parm =
+#if PRINT_DEBUG
+            const
+#else
+            constexpr
+#endif
+            clock_params_16 parm =
                 calc_params_16<opmode, CTC_TOP_OCR>(freq);
-            if (parm.freq == (freq_t) -1) {
+            if (parm.freq == (freq_t) -1 || !parm.prescaler_factor) {
                 valid = false;
                 return;
-            } 
+            }
             target_freq = freq;
             top_val = parm.top;
             prescaler_factor = parm.prescaler_factor;
@@ -315,7 +348,15 @@ private:
 
     inline void timertest2() {
         //timer1.set_clock<OM_CTC, 0xB00B>();
-        timer1.set_clock<OM_CTC, 172>();
+        //timer1.set_clock<OM_CTC, 172>();
+        //timer1.set_clock<OM_CTC, 79>();
+        //timer1.set_clock<OM_CTC, 65537>();
+        //timer1.set_clock<OM_CTC, 700000>();
+        //timer1.set_clock<OM_CTC, 67>();
+        //timer1.set_clock<OM_CTC, 1367>();
+        timer1.set_clock<OM_CTC, 113>();
+        //timer1.set_clock<OM_CTC, 499'999>();
+        //timer1.set_clock<OM_CTC, 500'001>();
     }
 }
 
