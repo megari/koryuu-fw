@@ -15,7 +15,7 @@
 #include "debounce.hh"
 #include "koryuu_settings.hh"
 
-_T_DECL(FW_VERSION, "1.1-RC3");
+_T_DECL(FW_VERSION, "1.1");
 __attribute__((used))
 static const auto& FW_VERSION = _T_REF(FW_VERSION);
 

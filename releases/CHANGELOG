@@ -1,5 +1,15 @@
 Changelog for the Koryuu firmware
 =================================
+
+Version 1.1
+-----------
+    Notes:
+      - Official release version.
+      - Will be shipped on new Koryuu units.
+
+    Changes:
+      - Made "-ntp" firmware variants disable free-run mode statically.
+
 Version 1.1-RC3
 ---------------
     Notes:
