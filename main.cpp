@@ -171,31 +171,6 @@ static void setup_encoder(bool reset = false)
     // Enable DAC autopower-down (based on cable detection)
     I2C_WRITE(encoder.address, 0x10, 0x10);
 
-#if !ENC_TEST_PATTERN
-    // SD input mode
-    //I2C_WRITE(encoder.address, 0x01, 0x00);
-
-    // NTSC, SSAF luma filter, 1.3MHz chroma filter
-    //I2C_WRITE(encoder.address, 0x80, 0x10);
-#endif
-
-    // Pixel data invalid, YPrPb, *no* PrPb SSAF filter, AVE control, pedestal
-    //I2C_WRITE(encoder.address, 0x82, 0xA8);
-
-    // Use defaults:
-    // No SD pedestal YPrPb
-    // SD output level for Y: 700mV/300mV
-    // SD output level for PrPb: 700mV
-    // SD VBI disabled
-    // SD closed captioning disabled
-    //I2C_WRITE(encoder.address, 0x83, 0x04);
-
-    // Enable subcarrier frequency lock
-    //I2C_WRITE(encoder.address, 0x84, 0x06);
-
-    // Autodetect SD input standard
-    //I2C_WRITE(encoder.address, 0x87, 0x20);
-
     if (interlace_status == INTERLACE_STATUS_INTERLACED) {
         // Disable SD progressive mode
         I2C_WRITE(encoder.address, 0x88, 0x04);
@@ -205,25 +180,10 @@ static void setup_encoder(bool reset = false)
         I2C_WRITE(encoder.address, 0x88, 0x06);
     }
 
-    // Pixel data valid, YPrPb, *no* PrPb SSAF filter, AVE control, pedestal
-    //I2C_WRITE(encoder.address, 0x82, 0xc8);
-
-#if ENC_TEST_PATTERN
-    // Color bar test pattern
-    //I2C_WRITE(encoder.address, 0x84, 0x40);
-#endif
-    //I2C_WRITE(encoder.address, 0x02, 0x70);
-    //I2C_WRITE(encoder.address, 0x82, 0x03);
-    //I2C_WRITE(encoder.address, 0x84, 0x70);
-    //I2C_WRITE(encoder.address, 0x02, 0x30);
-    //I2C_WRITE(encoder.address, 0x82, 0x02);
-    //I2C_WRITE(encoder.address, 0x84, 0x80);
     const uint8_t input_status = I2C_READ_ONE(decoder.address, 0x13);
 
     I2C_WRITE(encoder.address, 0x00, 0x1C);
     I2C_WRITE(encoder.address, 0x01, 0x00);
-    //I2C_WRITE(encoder.address, 0x02, 0x20);
-    //I2C_WRITE(encoder.address, 0x87, 0x1F);//disable autodetect standard (plus rien en sortie pour le moment)
     if(input_status & 0x04 ?true:false)
     {
         I2C_WRITE(encoder.address, 0x80, 0x11);//0x11 for pal
