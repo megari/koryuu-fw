@@ -173,18 +173,29 @@ static void setup_encoder(bool reset = false)
 
     if (interlace_status == INTERLACE_STATUS_INTERLACED) {
         // Disable SD progressive mode
+        // Enable SD double buffering
         I2C_WRITE(encoder.address, 0x88, 0x04);
     }
     else {
         // Enable SD progressive mode
+        // Enable SD double buffering
         I2C_WRITE(encoder.address, 0x88, 0x06);
     }
+    // Double buffering might be doing something else than what the author
+    // thinks it might be doing, as it only pertains to register updates...
 
     const uint8_t input_status = I2C_READ_ONE(decoder.address, 0x13);
 
+    // All DACs and PLL on. Sleep mode off.
     I2C_WRITE(encoder.address, 0x00, 0x1C);
+
+    // Mode selection set to defaults (SD, default luma/chroma edges)
     I2C_WRITE(encoder.address, 0x01, 0x00);
-    if(input_status & 0x04 ?true:false)
+
+    // Not using the SD input standard autodetection (Register 0x87, bit 5),
+    // as we are setting the output video standard and subcarrier to those of
+    // PAL or PAL60.
+    if(input_status & 0x04)
     {
         I2C_WRITE(encoder.address, 0x80, 0x11);//0x11 for pal
     }
@@ -192,17 +203,38 @@ static void setup_encoder(bool reset = false)
     {
         I2C_WRITE(encoder.address, 0x80, 0x12);//0x12 for pal M
     }
+
     if(component_enabled)
     {
+        // SD AVE on, pixel data valid, no pedestal, YPbPr, PrPb SSAF off
         I2C_WRITE(encoder.address, 0x82, 0xC1);
     }
     else
     {
+        // SD AVE on, pixel data valid, no pedestal, CVBS, PrPb SSAF off
         I2C_WRITE(encoder.address, 0x82, 0xC3);//0xCB for pedestal  sinon 0xC3
     }
+
+    // Closed captioning on both fields
+    // VBI open
+    //     This actually disables VBI, does it not?
+    // PrPb level: 700 mVpp
+    // Y level: 700/300 mV
+    // No YPbPr pedestal
     I2C_WRITE(encoder.address, 0x83, 0x74);//closedcaptioning + ire 0 output
+
+
+
+    // Set brightness value to 0x71, which indeed is for IRE -7.5
+    // BUG: Where is the required write to 0x87 bit 3? This won't work.
     I2C_WRITE(encoder.address, 0xA1, 0x71);//brightness  control IRE-7.5
 
+
+
+    // Setting subcarrier frequency bits for a 4.43 MHz (PAL) subcarrier.
+    // Subcarrier frequency lock is not enabled.
+    // This is probably because we always want to output PAL?
+    // NOTE: this requires SD input autodetection to be off.
     I2C_WRITE(encoder.address, 0x8C, 0xCB);
     I2C_WRITE(encoder.address, 0x8D, 0x8A);
     I2C_WRITE(encoder.address, 0x8E, 0x09);
@@ -347,6 +379,7 @@ static void setup_video(PhysInput input, bool pedestal, bool smoothing)
 
     // Extended output control
     // Output full range, enable SFL, blank chroma during VBI, ITU BT.656-4
+    // BUG? The VBI setting may conflict with closed captioning.
     decoder.set_ext_output_control(true, true, true, false, true);
 
     // A write to a supposedly read-only register, recommended by AD scripts.
@@ -420,16 +453,37 @@ static void setup_video(PhysInput input, bool pedestal, bool smoothing)
     I2C_WRITE(decoder.address, 0xf4, 0x00);
 #endif
     //filtering ntsc adaptive
+    // Set NTSC luma comb mode to default
+    //    (adaptive three-line, three tab comb)
+    // Set NTSC chroma comb mode to 0b011 [undefined]!!!
+    // Set NTSC chroma comb taps to five-to-four lines
     I2C_WRITE(decoder.address, 0x38, 0xD8);
+
     //filtering pal adaptive
+    // Set PAL luma comb to default
+    //    (adaptive five-line, three-tap comb)
+    // Set PAL chroma comb mode to 0b011 [undefined]!!!
+    // Set PAL chroma comb taps to five-to-four lines
     I2C_WRITE(decoder.address, 0x39, 0xD8);
 
     //ace Automatic contrast enhancement
+    // Access user sub map 2
     I2C_WRITE(decoder.address, 0x0E, 0x40);
+
+    // Enable ACE
     I2C_WRITE(decoder.address, 0x80, 0x80);
+
+    // Set luma ACE autocontrast level to max
     I2C_WRITE(decoder.address, 0x83, 0x1F);
+
+    // Set chroma ACE gain and color saturation level to max.
     I2C_WRITE(decoder.address, 0x84, 0xFF);
+
+    // Set ACE gamma gain to max
+    // Set ACE response speed to slowest.
     I2C_WRITE(decoder.address, 0x85, 0x0F);//slow
+
+    // Access user sub map
     I2C_WRITE(decoder.address, 0x0E, 0x00);
 
     // Encoder setup
@@ -637,6 +691,7 @@ int main(void)
             pedestal_enabled = !pedestal_enabled;
             led_OPT = pedestal_enabled;
 
+            // Why a switch for a boolean expression?
             switch (pedestal_enabled) {
             case true:
                 decoder.select_autodetection(AD_PALBGHID_NTSCM_SECAM);
